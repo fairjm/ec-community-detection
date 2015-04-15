@@ -16,7 +16,7 @@ object Modularity {
    * @return
    *  Q list of the community
    */
-  def compute(comms: List[Set[String]], graph: Graph): List[Double] = {
+  def compute(comms: Graph.Community, graph: Graph): List[Double] = {
     var remainingEdges = graph.getEdges
     val e = remainingEdges.size
 

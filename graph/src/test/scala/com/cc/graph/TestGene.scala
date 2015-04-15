@@ -15,8 +15,8 @@ class TestGene extends WordSpec with MustMatchers {
       assert(result(0) == Gene("1", "5", "6", "4"))
     }
     "add element to target and remove element from source(source >1)" in {
-      val g1 = Gene("1", "2", "3")
-      val g2 = Gene("4", "5", "6")
+      val g1 = Gene("1", "2", "3", "a")
+      val g2 = Gene("4", "5", "6", "c")
 
       val sourceSize = g1.size
       val targetSize = g2.size

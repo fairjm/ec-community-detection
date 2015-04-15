@@ -69,7 +69,12 @@ class WorkFlow {
     if (genes.size > 1) {
       val g1 = genes.remove(random.nextInt(genes.size))
       val g2 = genes.remove(random.nextInt(genes.size))
-      genes ++= Gene.move(g1, g2)
+      val moved = Gene.move(g1, g2)
+      if (moved.exists(_.size < 3)) {
+        genes += moved.reduce(Gene.merge)
+      } else {
+        genes ++= moved
+      }
     }
   }
 

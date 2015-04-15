@@ -47,7 +47,6 @@ object Gene {
     sNodes match {
       case Array()         => List(target)
       case Array(v)        => List(target + v)
-      case a if a.size < 4 => List(source + target)
       case _ =>
         val random = TLRandom.current()
         val movedValue = sNodes(random.nextInt(sNodes.size))

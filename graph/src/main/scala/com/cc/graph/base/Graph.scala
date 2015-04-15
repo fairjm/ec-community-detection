@@ -33,6 +33,9 @@ trait Graph {
 }
 
 object Graph {
+
+  type Community = List[Set[String]]
+
   def load(fileName: String, seperator: String = ","): Graph = {
     val source = Source.fromFile(fileName)
     try {
@@ -100,7 +103,7 @@ class MutableGraph private (
    * @param vertex
    *  the vertex to remove
    */
-  def removeVetrix(vertex: Vertex): this.type = {
+  def removeVertex(vertex: Vertex): this.type = {
     withLock {
       if (vertexes.contains(vertex)) {
         displayGraph.removeNode(vertex.id)
