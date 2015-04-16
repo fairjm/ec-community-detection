@@ -46,7 +46,30 @@ public class Gene {
         return new Gene(newNodes);
     }
 
-    public int size(){
+    /**
+     * replace the old value with the new value if the old value is not present
+     * then return the gene itself if the old value and new value is present
+     * then just like remove(oldValue)(cause the new value is present in the
+     * gene)
+     *
+     * @param oldValue
+     * @param newValue
+     * @return
+     */
+    public Gene replace(String oldValue, String newValue) {
+        if (!nodes.contains(oldValue) || oldValue.equals(newValue)) {
+            return this;
+        }
+        if (nodes.contains(newValue)) {
+            return remove(oldValue);
+        }
+        Set<String> newNodes = new HashSet<>(nodes);
+        newNodes.remove(oldValue);
+        newNodes.add(newValue);
+        return new Gene(newNodes);
+    }
+
+    public int size() {
         return nodes.size();
     }
 
