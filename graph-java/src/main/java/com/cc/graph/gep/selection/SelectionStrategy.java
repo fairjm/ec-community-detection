@@ -5,7 +5,7 @@ import java.util.List;
 import com.cc.graph.base.Graph;
 import com.cc.graph.gep.Chromosome;
 
-public interface ChromosomeSelection {
+public interface SelectionStrategy {
 
     SelectionResult choose(List<Chromosome> chroms, Graph graph, int chooseNum);
 

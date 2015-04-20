@@ -105,7 +105,7 @@ public class Gene {
         }
         StringBuilder sb = new StringBuilder("u{");
         for (String n : nodes) {
-            sb.append(n + ",");
+            sb.append(n.trim() + ",");
         }
         return sb.substring(0, sb.length() - 1) + "}";
     }

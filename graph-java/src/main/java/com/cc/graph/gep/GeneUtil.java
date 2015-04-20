@@ -48,8 +48,7 @@ public class GeneUtil {
                 String[] g1Nodes = g1.nodes.toArray(new String[0]);
                 String[] g2Nodes = g2.nodes.toArray(new String[0]);
                 String g1MovedValue = g1Nodes[random.nextInt(g1Nodes.length)];
-                String g2MovedValue = g2Nodes[random.nextInt(random
-                        .nextInt(g2Nodes.length))];
+                String g2MovedValue = g2Nodes[random.nextInt(g2Nodes.length)];
                 return Arrays.asList(g1.replace(g1MovedValue, g2MovedValue),
                         g2.replace(g2MovedValue, g1MovedValue));
             }

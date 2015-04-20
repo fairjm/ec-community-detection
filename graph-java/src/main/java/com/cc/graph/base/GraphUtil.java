@@ -1,0 +1,24 @@
+package com.cc.graph.base;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
+public class GraphUtil {
+
+    public static Graph load(String fileName) throws IOException {
+        return load(fileName, ",");
+    }
+
+    public static Graph load(String fileName, String seperator)
+            throws IOException {
+        MutableGraph graph = Files.readAllLines(Paths.get(fileName)).stream()
+                .map(l -> l.trim()).filter(l -> l.length() > 0)
+                .map(l -> l.split(seperator)).filter(cs -> cs.length == 2)
+                .reduce(new MutableGraph(), (r, e) -> {
+                    r.addEdge(new Edge(e[0], e[1]));
+                    return r;
+                }, (r1, r2) -> r1);
+        return graph.freeze();
+    }
+}

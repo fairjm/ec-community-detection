@@ -13,41 +13,43 @@ import com.cc.graph.base.MutableGraph
 import com.cc.graph.base.Edge
 
 class WorkFlow {
-  selection: ChromosomeSelection =>
+
+  selection: SelectionStrategy =>
 
   import Conf.Gep._
 
-  var generations = List[Population]()
-
-  lazy val random = TLRandom.current()
+  type History = List[Population]
+  type Result = (Population, History)
 
   /**
    * run the init population<br/>
    * the related props are from application.conf
    */
-  def run(graph: Graph): Population = {
+  def run(graph: Graph): Result = {
     val initPopulation = Population.generate(graph, populationSize)
-    innerRun(initPopulation, graph, generationNum)
+    innerRun((initPopulation, List(initPopulation)), graph, generationNum)
   }
 
   @tailrec
-  private def innerRun(current: Population, graph: Graph, maxGenerationNum: Int): Population = {
-    println(current.generationNum + "/" + maxGenerationNum)
-    generations = current :: generations
-    if (current.generationNum >= maxGenerationNum) {
-      current
+  private def innerRun(lastResult: Result, graph: Graph, maxGenerationNum: Int): Result = {
+    val lastPop = lastResult._1
+    println(lastPop.generationNum + "/" + maxGenerationNum)
+    if (lastPop.generationNum >= maxGenerationNum) {
+      lastResult
     } else {
       // remain one positive for the best
-      val choosedChroms = selection.choose(current.chromosomes, graph, current.chromosomes.size - 1)
+      val choosedChroms = selection.choose(lastPop.chromosomes, graph, lastPop.chromosomes.size - 1)
       val mutatedChroms = for (chrom <- choosedChroms.selected) yield {
         operateChromosome(chrom)
       }
       val theRemainedOne = choosedChroms.best.getOrElse(Chromosome.generate(graph))
-      innerRun(Population(mutatedChroms :+ theRemainedOne, current.generationNum + 1), graph, maxGenerationNum)
+      val newPopulation = Population(mutatedChroms :+ theRemainedOne, lastPop.generationNum + 1)
+      innerRun((newPopulation, newPopulation :: lastResult._2), graph, maxGenerationNum)
     }
   }
 
   private def operateChromosome(chrom: Chromosome): Chromosome = {
+    val random = TLRandom.current()
     val ls = ListBuffer[Gene]()
     ls ++= chrom.genes
     if (random.nextDouble() <= geneMove) {
@@ -66,6 +68,7 @@ class WorkFlow {
   }
 
   private def doGeneMove(genes: ListBuffer[Gene]): Unit = {
+    val random = TLRandom.current()
     if (genes.size > 1) {
       val g1 = genes.remove(random.nextInt(genes.size))
       val g2 = genes.remove(random.nextInt(genes.size))
@@ -79,6 +82,7 @@ class WorkFlow {
   }
 
   private def doGeneExchange(genes: ListBuffer[Gene]): Unit = {
+    val random = TLRandom.current()
     if (genes.size > 1) {
       val g1 = genes.remove(random.nextInt(genes.size))
       val g2 = genes.remove(random.nextInt(genes.size))
@@ -92,6 +96,7 @@ class WorkFlow {
   }
 
   private def doGeneMerge(genes: ListBuffer[Gene]): Unit = {
+    val random = TLRandom.current()
     if (genes.size > 1) {
       val g1 = genes.remove(random.nextInt(genes.size))
       val g2 = genes.remove(random.nextInt(genes.size))
@@ -103,8 +108,9 @@ class WorkFlow {
 object WorkFlow extends App {
   val workFlow = new WorkFlow with ModularitySelection
   val graph = Graph.load("src/main/resources/Zachary.txt")
-  val pop = workFlow.run(graph)
-  val chromWithModularities = pop.chromosomes zip pop.chromosomes.map(c => Modularity.compute(c.genes.toList.map(_.nodes), graph).sum)
+  val result = workFlow.run(graph)
+  val pop = result._1
+  val chromWithModularities = pop.chromosomes zip pop.chromosomes.map(c => Modularity.compute(c.toCommunityStyle, graph).sum)
   val sorted = chromWithModularities.sortBy(-1 * _._2)
   val best = sorted.map(_._1).apply(0)
   println(best)

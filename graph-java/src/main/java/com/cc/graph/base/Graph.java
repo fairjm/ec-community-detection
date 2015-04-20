@@ -10,4 +10,5 @@ public interface Graph {
     public Set<Edge> getEdges();
 
     public void display();
+
 }

@@ -14,20 +14,20 @@ import scala.collection.mutable.ListBuffer
  */
 case class SelectionResult(best: Option[Chromosome], selected: Vector[Chromosome])
 
-trait ChromosomeSelection {
+trait SelectionStrategy {
   def choose(chroms: Vector[Chromosome], graph: Graph, chooseNum: Int): SelectionResult
 
   def choose(chroms: Vector[Chromosome], graph: Graph): SelectionResult = choose(chroms, graph, chroms.size)
 }
 
-trait ModularitySelection extends ChromosomeSelection {
+trait ModularitySelection extends SelectionStrategy {
   val antiImPositive = 0.25
   def choose(chroms: Vector[Chromosome], graph: Graph, chooseNum: Int): SelectionResult = {
     if (chroms.size == 0) {
       SelectionResult(None, chroms)
     } else {
       val modularities = for (chrom <- chroms) yield {
-        val communities = chrom.genes.toList.map(_.nodes)
+        val communities = chrom.toCommunityStyle
         val modularities = Modularity.compute(communities, graph)
         modularities.map(_ + antiImPositive).sum
       }

@@ -27,8 +27,11 @@ public class Chromosome {
         while (nodeIds.size() > 0) {
             int size = nodeIds.size();
             int position;
-            if (size > 3) {
+            if (size > 5) {
                 position = random.nextInt(3, size);
+                if (size - position <= 2) {
+                    position = size;
+                }
                 temps.add(new Gene(new HashSet<String>(nodeIds.subList(0,
                         position))));
                 nodeIds = nodeIds.subList(position, size);
@@ -63,6 +66,10 @@ public class Chromosome {
         } else if (!genes.equals(other.genes))
             return false;
         return true;
+    }
+
+    public List<Set<String>> toCommunityStyle() {
+        return genes.stream().map(g -> g.nodes).collect(Collectors.toList());
     }
 
     @Override
