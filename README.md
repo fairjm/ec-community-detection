@@ -8,4 +8,4 @@ The paper is not well implemented.
 I have not implemented the `Map Equation` and I set the splitoff factor to 0 cause there is no merging function mentioned in the paper. 
 
 ## graph-java project  
-a java version of the graph project(in progress).
+a java version of the graph project.
