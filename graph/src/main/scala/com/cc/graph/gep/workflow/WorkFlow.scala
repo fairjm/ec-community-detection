@@ -73,11 +73,7 @@ class WorkFlow {
       val g1 = genes.remove(random.nextInt(genes.size))
       val g2 = genes.remove(random.nextInt(genes.size))
       val moved = Gene.move(g1, g2)
-      if (moved.exists(_.size < 3)) {
-        genes += moved.reduce(Gene.merge)
-      } else {
-        genes ++= moved
-      }
+      genes ++= moved
     }
   }
 
@@ -97,7 +93,8 @@ class WorkFlow {
 
   private def doGeneMerge(genes: ListBuffer[Gene]): Unit = {
     val random = TLRandom.current()
-    if (genes.size > 1) {
+    // if genes is 2 or less,there is no need to merge
+    if (genes.size > 2) {
       val g1 = genes.remove(random.nextInt(genes.size))
       val g2 = genes.remove(random.nextInt(genes.size))
       genes += Gene.merge(g1, g2)
@@ -107,7 +104,7 @@ class WorkFlow {
 
 object WorkFlow extends App {
   val workFlow = new WorkFlow with ModularitySelection
-  val graph = Graph.load("src/main/resources/Zachary.txt")
+  val graph = Graph.load("src/main/resources/test.txt")
   val result = workFlow.run(graph)
   val pop = result._1
   val chromWithModularities = pop.chromosomes zip pop.chromosomes.map(c => Modularity.compute(c.toCommunityStyle, graph).sum)
@@ -115,4 +112,5 @@ object WorkFlow extends App {
   val best = sorted.map(_._1).apply(0)
   println(best)
   println(sorted.map(_._2))
+  graph.displayCommunity(best.toCommunityStyle)
 }

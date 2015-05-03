@@ -2,17 +2,22 @@ package com.cc.graph.base
 
 import java.util.concurrent.locks.ReentrantLock
 import scala.io.Source
+import org.graphstream.graph.Node
 import com.cc.graph.Conf
 import com.cc.graph.util.LockUtil.withLock
+import org.graphstream.graph.implementations.MultiGraph
 import org.graphstream.graph.implementations.SingleGraph
-import org.graphstream.graph.Node
-import org.graphstream.ui.layout.springbox.implementations.LinLog
+import java.awt.Color
+import scala.collection.mutable.HashSet
+import scala.concurrent.forkjoin.ThreadLocalRandom
 
 trait Graph {
+
+  System.setProperty("org.graphstream.ui.renderer", "org.graphstream.ui.j2dviewer.J2DGraphRenderer");
+
   private[base] var edges: Set[Edge]
   private[base] var vertexes: Set[Vertex]
-  private[base] val displayGraph: SingleGraph
-
+  private[base] val displayGraph: org.graphstream.graph.Graph
   override def toString(): String = {
     s"""
     |vertexs: ${vertexes.toList.sortBy(_.id).mkString(",")}
@@ -22,6 +27,34 @@ trait Graph {
 
   def display = {
     displayGraph.display
+  }
+
+  def displayCommunity(communities: Graph.Community) = {
+    import scala.collection.JavaConversions._
+    displayGraph.getEdgeSet[org.graphstream.graph.Edge]().foreach(_.addAttribute("ui.style", "fill-color: rgba(0,0,0,128);"))
+    displayGraph.getNodeSet[org.graphstream.graph.Node]().foreach(_.addAttribute("ui.style", "fill-color: white;"))
+    val colors = HashSet[Tuple3[Int, Int, Int]]()
+    val random = ThreadLocalRandom.current()
+    communities.foreach {
+      comm =>
+        {
+          var color: (Int, Int, Int) = null
+          do { color = (random.nextInt(256), random.nextInt(256), random.nextInt(256)) } while (colors.contains(color))
+          colors += color
+          val colorString = s"rgb(${color._1},${color._2},${color._3})"
+          comm.foreach { s => displayGraph.getNode[org.graphstream.graph.Node](s).addAttribute("ui.style", s"fill-color: $colorString;") }
+          for {
+            e1 <- comm
+            e2 <- comm
+            if e1 < e2
+          } {
+            if (edges.contains(Edge.cons(e1, e2))) {
+              displayGraph.getEdge[org.graphstream.graph.Edge](e1 + e2).addAttribute("ui.style", s"fill-color: $colorString;")
+            }
+          }
+        }
+    }
+    display
   }
 
   def vertexIds: Set[String] = {
@@ -94,7 +127,7 @@ object Edge {
 class MutableGraph private (
   override private[base] var edges: Set[Edge],
   override private[base] var vertexes: Set[Vertex],
-  override private[base] val displayGraph: SingleGraph) extends Graph {
+  override private[base] val displayGraph: org.graphstream.graph.Graph) extends Graph {
 
   private implicit val _lock = new ReentrantLock
 
@@ -136,6 +169,7 @@ class MutableGraph private (
         vertexes = vertexes + vertex
         val node = displayGraph.addNode[Node](vertex.id)
         node.addAttribute("ui.label", node.getId)
+        node.addAttribute("ui.style", "fill-color: white;");
       }
     }
     this
@@ -158,7 +192,11 @@ class MutableGraph private (
 
 object MutableGraph {
   def apply(): MutableGraph = {
-    new MutableGraph(Set[Edge](), Set[Vertex](), new SingleGraph(Conf.projectName))
+    val graph = new MultiGraph(Conf.projectName)
+    graph.addAttribute("ui.stylesheet", s"url('${MutableGraph.getClass.getResource(".").toString()}stylesheet.css')")
+    graph.addAttribute("ui.quality");
+    graph.addAttribute("ui.antialias");
+    new MutableGraph(Set[Edge](), Set[Vertex](), graph)
   }
 
   def from(g: Graph): MutableGraph = {
@@ -173,7 +211,7 @@ object MutableGraph {
 class ImmutableGraph private (
   override val edges: Set[Edge],
   override val vertexes: Set[Vertex],
-  override private[base] val displayGraph: SingleGraph) extends Graph {
+  override private[base] val displayGraph: org.graphstream.graph.Graph) extends Graph {
 
   override private[base] def edges_=(x$1: Set[Edge]): Unit = ???
   override private[base] def vertexes_=(x$1: Set[Vertex]): Unit = ???
