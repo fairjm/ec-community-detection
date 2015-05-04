@@ -1,5 +1,6 @@
 package com.cc.graph.base;
 
+import java.util.List;
 import java.util.Set;
 
 public interface Graph {
@@ -10,5 +11,7 @@ public interface Graph {
     public Set<Edge> getEdges();
 
     public void display();
+
+    public void displayCommunity(List<Set<String>> communities);
 
 }

@@ -1,16 +1,16 @@
 package com.cc.graph.gep.workflow
 
-import com.cc.graph.gep.Population
 import java.util.concurrent.{ ThreadLocalRandom => TLRandom }
+
+import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
+
 import com.cc.graph.Conf
+import com.cc.graph.algorithm.Modularity
 import com.cc.graph.base.Graph
 import com.cc.graph.gep.Chromosome
-import scala.collection.mutable.ListBuffer
 import com.cc.graph.gep.Gene
-import scala.annotation.tailrec
-import com.cc.graph.algorithm.Modularity
-import com.cc.graph.base.MutableGraph
-import com.cc.graph.base.Edge
+import com.cc.graph.gep.Population
 
 class WorkFlow {
 
@@ -40,7 +40,7 @@ class WorkFlow {
       // remain one positive for the best
       val choosedChroms = selection.choose(lastPop.chromosomes, graph, lastPop.chromosomes.size - 1)
       val mutatedChroms = for (chrom <- choosedChroms.selected) yield {
-        operateChromosome(chrom)
+        operateChromosome(chrom, graph)
       }
       val theRemainedOne = choosedChroms.best.getOrElse(Chromosome.generate(graph))
       val newPopulation = Population(mutatedChroms :+ theRemainedOne, lastPop.generationNum + 1)
@@ -48,7 +48,7 @@ class WorkFlow {
     }
   }
 
-  private def operateChromosome(chrom: Chromosome): Chromosome = {
+  private def operateChromosome(chrom: Chromosome, graph: Graph): Chromosome = {
     val random = TLRandom.current()
     val ls = ListBuffer[Gene]()
     ls ++= chrom.genes
@@ -59,7 +59,7 @@ class WorkFlow {
       doGeneExchange(ls)
     }
     if (random.nextDouble() <= geneMerge) {
-      doGeneMerge(ls)
+      doGeneMerge(ls, graph)
     }
     if (random.nextDouble() <= geneSplitoff) {
       doGeneSplitOff(ls)
@@ -91,14 +91,11 @@ class WorkFlow {
     genes -= geneOfMaxSize ++= Gene.splitoff(geneOfMaxSize)
   }
 
-  private def doGeneMerge(genes: ListBuffer[Gene]): Unit = {
+  private def doGeneMerge(genes: ListBuffer[Gene], graph: Graph): Unit = {
     val random = TLRandom.current()
-    // if genes is 2 or less,there is no need to merge
-    if (genes.size > 2) {
-      val g1 = genes.remove(random.nextInt(genes.size))
-      val g2 = genes.remove(random.nextInt(genes.size))
-      genes += Gene.merge(g1, g2)
-    }
+    val chrom = Chromosome(genes: _*)
+    genes.clear()
+    genes ++= selection.choose(Combination(chrom), graph, 0).best.getOrElse(chrom).genes
   }
 }
 

@@ -32,24 +32,28 @@ trait ModularitySelection extends SelectionStrategy {
         modularities.map(_ + antiImPositive).sum
       }
       val best = chroms(modularities.indexOf(modularities.max))
-      val sum = modularities.sum
-      val accModularities = modularities.foldLeft(ListBuffer[Double]()) {
-        (r, e) =>
-          if (r.size == 0) r += e else r += r.last + e
-      }
-      val chromWithAccModularities = chroms zip accModularities
-      val random = TLRandom.current()
-      val countDown = (1 to chooseNum).toVector
-      val selected = for (i <- countDown) yield {
-        val chooseDouble = random.nextDouble(sum)
-        val choosed = chromWithAccModularities.dropWhile(_._2 < chooseDouble)
-        if (choosed.size == 0) {
-          chromWithAccModularities(chromWithAccModularities.size - 1)._1
-        } else {
-          choosed(0)._1
+      if (chooseNum <= 0) {
+        SelectionResult(Some(best), Vector.empty)
+      } else {
+        val sum = modularities.sum
+        val accModularities = modularities.foldLeft(ListBuffer[Double]()) {
+          (r, e) =>
+            if (r.size == 0) r += e else r += r.last + e
         }
+        val chromWithAccModularities = chroms zip accModularities
+        val random = TLRandom.current()
+        val countDown = (1 to chooseNum).toVector
+        val selected = for (i <- countDown) yield {
+          val chooseDouble = random.nextDouble(sum)
+          val choosed = chromWithAccModularities.dropWhile(_._2 < chooseDouble)
+          if (choosed.size == 0) {
+            chromWithAccModularities(chromWithAccModularities.size - 1)._1
+          } else {
+            choosed(0)._1
+          }
+        }
+        SelectionResult(Some(best), selected)
       }
-      SelectionResult(Some(best), selected)
     }
   }
 }

@@ -8,38 +8,32 @@ import scala.annotation.tailrec
 
 object Combination {
 
-  def apply(s: Chromosome): List[Chromosome] = {
-    val size = s.genes.size
-    val geneList = s.genes.toList
-    val buffer = ListBuffer[List[Int]]()
-    applyInner(0, size, List.empty, buffer)
-    val splits = buffer.toList
-    val geneCombinations = for (split <- splits) yield mergeGene(split, geneList)
-    geneCombinations.map(e => Chromosome(e: _*))
+  def apply(s: Chromosome): Vector[Chromosome] = {
+    val genes = s.genes
+    val buffer = ListBuffer[Vector[Gene]]()
+    applyInner(genes.toList, Vector.empty, buffer)
+    buffer.map(v => Chromosome(v: _*)).toVector
   }
 
-  private def applyInner(current: Int, size: Int, result: List[Int], buffer: ListBuffer[List[Int]]): Unit = {
-    val nextResult = current :: result
-    if (current >= size) {
-      buffer += nextResult.reverse
+  private def applyInner(genes: List[Gene], result: Vector[Gene], buffer: ListBuffer[Vector[Gene]]): Unit = {
+    if (genes.isEmpty) {
+      buffer += result
     } else {
-      for (i <- current + 1 to size) {
-        applyInner(i, size, nextResult, buffer)
+      for (i <- -1 until result.size) {
+        if (i == -1) {
+          applyInner(genes.tail, result :+ genes.head, buffer)
+        } else {
+          val g = result(i)
+          applyInner(genes.tail, result.updated(i, Gene.merge(g, genes.head)), buffer)
+        }
       }
     }
   }
 
-  private def mergeGene(indexList: List[Int], geneList: List[Gene]): List[Gene] = {
-    val groupdGene = indexList.sliding(2).toList.map(e => geneList.slice(e.head, e.tail.head))
-    groupdGene.map(group => group.reduce(Gene.merge))
-  }
-
   def main(args: Array[String]): Unit = {
-    val graph = Graph.load("src/main/resources/Dolphin.txt")
-    val c = Chromosome.generate(graph)
-    println(c)
-    val l = apply(c)
-    println(l)
+    val chromosome = Chromosome(Gene("1", "a"), Gene("2", "b"), Gene("3", "c"))
+    println(chromosome)
+    Combination(chromosome).foreach(println)
   }
 
 }

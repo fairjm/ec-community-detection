@@ -4,6 +4,7 @@ import static com.cc.graph.util.LockUtil.withLock;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -16,11 +17,24 @@ import com.cc.graph.Conf;
 
 public final class MutableGraph implements Graph {
 
+    {
+        System.setProperty("org.graphstream.ui.renderer",
+                "org.graphstream.ui.j2dviewer.J2DGraphRenderer");
+    }
+
     private final Set<Edge> edges = new HashSet<Edge>();
 
     private final Set<Vertex> vertexes = new HashSet<Vertex>();
 
     private final SingleGraph displayGraph = new SingleGraph(Conf.projectName);
+
+    {
+        displayGraph.addAttribute("ui.stylesheet", "url('"
+                + MutableGraph.class.getResource(".").toString()
+                + "stylesheet.css')");
+        displayGraph.addAttribute("ui.quality");
+        displayGraph.addAttribute("ui.antialias");
+    }
 
     private Lock _lock = new ReentrantLock();
 
@@ -91,7 +105,7 @@ public final class MutableGraph implements Graph {
         displayGraph.display();
     }
 
-    public ImmutableGraph freeze(){
+    public ImmutableGraph freeze() {
         return new ImmutableGraph(edges, vertexes, displayGraph);
     }
 
@@ -99,6 +113,11 @@ public final class MutableGraph implements Graph {
     public String toString() {
         return "MutableGraph [edges size=" + edges.size() + ", vertexes size="
                 + vertexes.size() + "]";
+    }
+
+    @Override
+    public void displayCommunity(List<Set<String>> communities) {
+        freeze().displayCommunity(communities);
     }
 
 }

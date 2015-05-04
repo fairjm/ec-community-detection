@@ -21,7 +21,7 @@ public class GeneUtil {
         int sourceSize = g1.size();
         if (sourceSize == 0)
             return Arrays.asList(g2);
-        if (sourceSize <= 3)
+        if (sourceSize == 1)
             return Arrays.asList(g2.add(g1));
         ThreadLocalRandom random = ThreadLocalRandom.current();
         String[] sNodes = g1.nodes.toArray(new String[0]);

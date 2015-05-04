@@ -104,6 +104,7 @@ public class WorkFlow {
                     .map(c -> operateChromosome(c))
                     .collect(Collectors.toList());
             Chromosome theRemainedOne = choosedChroms.best.get();
+            System.out.println(theRemainedOne);
             List<Chromosome> newChromosomes = new ArrayList<>(mutatedChroms);
             newChromosomes.add(theRemainedOne);
             Population population = new Population(newChromosomes,
@@ -139,15 +140,7 @@ public class WorkFlow {
             Gene g1 = genes.remove(random.nextInt(genes.size()));
             Gene g2 = genes.remove(random.nextInt(genes.size()));
             List<Gene> moved = GeneUtil.move(g1, g2);
-            if (moved.size() == 1) {
-                genes.add(moved.get(0));
-            } else if (moved.size() == 2) {
-                if (moved.get(0).size() < 3 || moved.get(1).size() < 3) {
-                    genes.add(GeneUtil.merge(moved.get(0), moved.get(1)));
-                } else {
-                    genes.addAll(moved);
-                }
-            }
+            genes.addAll(moved);
         }
     }
 
@@ -182,7 +175,7 @@ public class WorkFlow {
 
     public static void main(String[] args) throws IOException {
         WorkFlow workFlow = new WorkFlow(new ModularitySelection());
-        Graph graph = GraphUtil.load("src/main/resources/Zachary.txt");
+        Graph graph = GraphUtil.load("src/main/resources/test.txt");
         WorkFlow.Result r = workFlow.run(graph);
         Population pop = r.getLastPopulation();
         List<Chromosome> cs = pop.getChromosomes();
@@ -201,8 +194,10 @@ public class WorkFlow {
                 bestModularity = current;
             }
         }
+        Chromosome bestChromo = ccs.get(bestIndex);
         System.out.println("best:");
-        System.out.println(ccs.get(bestIndex));
+        System.out.println(bestChromo);
         System.out.println(modularities.get(bestIndex));
+        graph.displayCommunity(bestChromo.toCommunityStyle());
     }
 }
