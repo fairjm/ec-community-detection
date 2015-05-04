@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
  * select result</br>
  * best is the selected one who has the best score or None if there is no this one(selected is empty)
  */
-case class SelectionResult(best: Option[Chromosome], selected: Vector[Chromosome])
+case class SelectionResult(best: Option[Chromosome], selected: Vector[Chromosome], values: Vector[(Chromosome, Double)])
 
 trait SelectionStrategy {
   def choose(chroms: Vector[Chromosome], graph: Graph, chooseNum: Int): SelectionResult
@@ -21,25 +21,26 @@ trait SelectionStrategy {
 }
 
 trait ModularitySelection extends SelectionStrategy {
-  val antiImPositive = 0.25
   def choose(chroms: Vector[Chromosome], graph: Graph, chooseNum: Int): SelectionResult = {
     if (chroms.size == 0) {
-      SelectionResult(None, chroms)
+      SelectionResult(None, chroms, Vector.empty)
     } else {
       val modularities = for (chrom <- chroms) yield {
         val communities = chrom.toCommunityStyle
         val modularities = Modularity.compute(communities, graph)
-        modularities.map(_ + antiImPositive).sum
+        modularities.sum
       }
-      val best = chroms(modularities.indexOf(modularities.max))
+      val values = (chroms zip modularities).sortBy(-1 * _._2)
+      val best = values(0)._1
       if (chooseNum <= 0) {
-        SelectionResult(Some(best), Vector.empty)
+        SelectionResult(Some(best), Vector.empty, values)
       } else {
-        val sum = modularities.sum
         val accModularities = modularities.foldLeft(ListBuffer[Double]()) {
           (r, e) =>
-            if (r.size == 0) r += e else r += r.last + e
+            val guard = if (e < 0) 0 else e
+            if (r.size == 0) r += guard else r += r.last + guard
         }
+        val sum = accModularities.last
         val chromWithAccModularities = chroms zip accModularities
         val random = TLRandom.current()
         val countDown = (1 to chooseNum).toVector
@@ -52,7 +53,7 @@ trait ModularitySelection extends SelectionStrategy {
             choosed(0)._1
           }
         }
-        SelectionResult(Some(best), selected)
+        SelectionResult(Some(best), selected, values)
       }
     }
   }
