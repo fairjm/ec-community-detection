@@ -7,7 +7,7 @@ import util.Random
 case class Chromosome private (genes: Set[Gene]) {
   override def toString(): String = genes.mkString
 
-  def toCommunityStyle: Graph.Community = genes.map(_.nodes).toList
+  def toCommunityStyle: Graph.Communities = genes.map(_.nodes).toList
 }
 
 object Chromosome {
