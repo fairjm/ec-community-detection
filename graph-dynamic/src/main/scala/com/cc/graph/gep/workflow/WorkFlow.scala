@@ -12,56 +12,68 @@ import com.cc.graph.gep.Chromosome
 import com.cc.graph.gep.Gene
 import com.cc.graph.gep.Population
 
-case class Result(best: Chromosome, history: List[Population])
+case class Result(bests: List[Chromosome])
 class WorkFlow {
 
   selection: SelectionStrategy =>
 
   import Conf.Gep._
 
-  type History = List[Population]
-  type InnerResult = (Population, History)
-
   /**
    * run the init population<br/>
    * the related props are from application.conf
    */
-  def run(graph: Graph): Result = {
+  def run(graphs: Graph*): Result = {
+    if (graphs.isEmpty) {
+      Result(Nil)
+    } else {
+      val chroms = ListBuffer[Chromosome]()
+
+      // when timestamp is 0
+      val firstGraph = graphs.head
+      println("timestamp-0")
+      val best = runTimestamp0(graphs.head,generationNum)
+      chroms += best
+
+
+      Result(chroms.toList)
+    }
+  }
+
+  private def runTimestamp0(graph: Graph, maxGenerationNum: Int): Chromosome = {
     val initPopulation = Population.generate(graph, populationSize)
-    val inner = innerRun((initPopulation, List(initPopulation)), graph, generationNum)
-    val lastPop = inner._1
-    var best = selection.choose(lastPop.chromosomes, graph, 0).best.get
-    var better: Chromosome = best
-    println("do combination iteration")
-    do {
-      best = better
-      val r = selection.choose(Combination(best), graph, 0)
-      better = r.best.get
-      r.values.foreach(re => {
-        println(re._1)
-        println(re._2)
-      })
-      println("better=" + better)
-      println("best=" + best)
-    } while (best != better)
-    Result(best, inner._2)
+    val lastPop = innerTimestamp0(initPopulation, graph, generationNum)
+    selection.choose(lastPop.chromosomes, graph, 0).best.get
   }
 
   @tailrec
-  private def innerRun(lastResult: InnerResult, graph: Graph, maxGenerationNum: Int): InnerResult = {
-    val lastPop = lastResult._1
-    println(lastPop.generationNum + "/" + maxGenerationNum)
-    if (lastPop.generationNum >= maxGenerationNum) {
-      lastResult
+  private def innerTimestamp0(lastPopulation: Population, graph: Graph, maxGenerationNum: Int): Population = {
+    println(lastPopulation.generationNum + "/" + maxGenerationNum)
+    if (lastPopulation.generationNum >= maxGenerationNum) {
+      lastPopulation
     } else {
       // remain one positive for the best
-      val choosedChroms = selection.choose(lastPop.chromosomes, graph, lastPop.chromosomes.size - 1)
+      val choosedChroms = selection.choose(lastPopulation.chromosomes, graph, lastPopulation.chromosomes.size - 1)
       val mutatedChroms = for (chrom <- choosedChroms.selected) yield {
         operateChromosome(chrom, graph)
       }
       val theRemainedOne = choosedChroms.best.getOrElse(Chromosome.generate(graph))
-      val newPopulation = Population(mutatedChroms :+ theRemainedOne, lastPop.generationNum + 1)
-      innerRun((newPopulation, newPopulation :: lastResult._2), graph, maxGenerationNum)
+      val newPopulation = Population(mutatedChroms :+ theRemainedOne, lastPopulation.generationNum + 1)
+      innerTimestamp0(newPopulation, graph, maxGenerationNum)
+    }
+  }
+
+  private def innerTimestampN(lastPopulation: Population, graph: Graph, maxGenerationNum: Int, lastTimestampCommunities: Chromosome): Population = {
+    println(lastPopulation.generationNum + "/" + maxGenerationNum)
+    if (lastPopulation.generationNum >= maxGenerationNum) {
+      lastPopulation
+    } else {
+      val p = lastPopulation.chromosomes
+      val q =  for (chrom <- p) yield {
+        operateChromosome(chrom, graph)
+      }
+      val mixed = p ++ q
+      lastPopulation
     }
   }
 
@@ -119,9 +131,9 @@ class WorkFlow {
 
 object WorkFlow extends App {
   val workFlow = new WorkFlow with ModularitySelection
-  val graph = Graph.load("src/main/resources/Dolphin.txt")
+  val graph = Graph.load("src/main/resources/test2.txt")
   val result = workFlow.run(graph)
-  val best = result.best
+  val best = result.bests(0)
   println(best)
   println(Modularity.compute(best.toCommunityStyle, graph).sum)
   graph.displayCommunity(best.toCommunityStyle)

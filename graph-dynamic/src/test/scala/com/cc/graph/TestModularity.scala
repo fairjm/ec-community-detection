@@ -9,7 +9,7 @@ class TestModularity extends WordSpec with MustMatchers {
 
   "modularity computation" must {
     "return the graph's modularities of the communities" in {
-      val graph = MutableGraph()
+      val graph = MutableGraph("test")
 
       graph.addEdge(Edge.cons("1", "2"))
       graph.addEdge(Edge.cons("1", "3"))

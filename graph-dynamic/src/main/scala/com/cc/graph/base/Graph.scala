@@ -69,7 +69,7 @@ object Graph {
 
   type Communities = List[Set[String]]
 
-  def load(fileName: String, seperator: String = ","): Graph = {
+  def load(fileName: String, graphName: String = Conf.projectName, seperator: String = ","): Graph = {
     val source = Source.fromFile(fileName)
     try {
       val g = source.getLines().toStream
@@ -77,7 +77,7 @@ object Graph {
         .filter(_.length() > 0)
         .map(_.split(seperator))
         .filter(_.size == 2)
-        .foldLeft(MutableGraph()) { (r, e) => r.addEdge(Edge.cons(Vertex(e(0).trim()), Vertex(e(1).trim()))) }
+        .foldLeft(MutableGraph(graphName)) { (r, e) => r.addEdge(Edge.cons(Vertex(e(0).trim()), Vertex(e(1).trim()))) }
       ImmutableGraph.from(g)
     } finally { source.close() }
   }
@@ -191,8 +191,8 @@ class MutableGraph private (
 }
 
 object MutableGraph {
-  def apply(): MutableGraph = {
-    val graph = new MultiGraph(Conf.projectName)
+  def apply(name: String): MutableGraph = {
+    val graph = new MultiGraph(name)
     graph.addAttribute("ui.stylesheet", s"url('${MutableGraph.getClass.getResource(".").toString()}stylesheet.css')")
     graph.addAttribute("ui.quality");
     graph.addAttribute("ui.antialias");
