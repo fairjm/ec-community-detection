@@ -15,9 +15,12 @@ private[this] class ChromosomeWithDistance(chrom: Chromosome) {
 
 object NSGAII {
 
-  private type Pop = List[Chromosome]
+  private type Pop = Seq[Chromosome]
 
-  def fastNondominatedSort(pop: Pop, graph: Graph, lastTimeBest: Chromosome): Pop = {
+  /**
+   * return the list grouped by level
+   */
+  def fastNondominatedSort(pop: Pop, graph: Graph, lastTimeBest: Chromosome): Vector[(Int, List[Chromosome])] = {
     val s = HashMap[Chromosome, ListBuffer[Chromosome]]()
     val n = HashMap[Chromosome, Int]()
     val pLevel = HashMap[Int, ListBuffer[Chromosome]]()
@@ -29,7 +32,7 @@ object NSGAII {
       if (dominated(p, q, graph, lastTimeBest)) {
         s.getOrElseUpdate(p, ListBuffer()) += q
       } else if (dominated(q, p, graph, lastTimeBest)) {
-        n.update(p, n.getOrElseUpdate(p, 0) + 1)
+        n.update(p, n.getOrElse(p, 0) + 1)
       }
     }
     for (p <- pop) {
@@ -53,7 +56,7 @@ object NSGAII {
       i = i + 1
       pLevel.update(i, h)
     }
-    Nil
+    pLevel.toStream.filter(_._2.size > 0).map(e => (e._1,e._2.toList)).toVector.sortBy(_._1)
   }
 
   def crowdingDistanceAssignment(pop: Pop, graph: Graph, lastTimeBest: Chromosome): List[(Chromosome, Double)] = {

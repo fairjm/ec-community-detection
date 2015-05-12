@@ -1,16 +1,15 @@
 package com.cc.graph.gep.workflow
 
 import java.util.concurrent.{ ThreadLocalRandom => TLRandom }
-
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
-
 import com.cc.graph.Conf
 import com.cc.graph.algorithm.Modularity
 import com.cc.graph.base.Graph
 import com.cc.graph.gep.Chromosome
 import com.cc.graph.gep.Gene
 import com.cc.graph.gep.Population
+import com.cc.graph.mo.NSGAII
 
 case class Result(bests: List[Chromosome])
 class WorkFlow {
@@ -32,9 +31,18 @@ class WorkFlow {
       // when timestamp is 0
       val firstGraph = graphs.head
       println("timestamp-0")
-      val best = runTimestamp0(graphs.head,generationNum)
+      val best = runTimestamp0(graphs.head, generationNum)
       chroms += best
 
+      //when timestamp is larger than 0
+      val tail = graphs.tail
+      var lastBest = best
+
+      for (graph <- tail) {
+        val current = runTimestampN(graph, generationNum, lastBest)
+        chroms += current
+        lastBest = current
+      }
 
       Result(chroms.toList)
     }
@@ -63,17 +71,43 @@ class WorkFlow {
     }
   }
 
+  private def runTimestampN(graph: Graph, maxGenerationNum: Int, lastTimestampCommunities: Chromosome): Chromosome = {
+    val initPopulation = Population.generate(graph, populationSize)
+    val lastPop = innerTimestampN(initPopulation, graph, generationNum, lastTimestampCommunities)
+    val levels = NSGAII.fastNondominatedSort(lastPop.chromosomes, graph, lastTimestampCommunities)
+    // choose the max modularity of the first level
+    levels(0)._2.maxBy(chrom => Modularity.compute(chrom.toCommunityStyle, graph).sum)
+  }
+
+  @tailrec
   private def innerTimestampN(lastPopulation: Population, graph: Graph, maxGenerationNum: Int, lastTimestampCommunities: Chromosome): Population = {
     println(lastPopulation.generationNum + "/" + maxGenerationNum)
     if (lastPopulation.generationNum >= maxGenerationNum) {
       lastPopulation
     } else {
       val p = lastPopulation.chromosomes
-      val q =  for (chrom <- p) yield {
+      val length = p.size
+      val q = for (chrom <- p) yield {
         operateChromosome(chrom, graph)
       }
       val mixed = p ++ q
-      lastPopulation
+      val levels = NSGAII.fastNondominatedSort(mixed, graph, lastTimestampCommunities)
+
+      var rest = length
+      var i = 0
+      val buffer = ListBuffer[Chromosome]()
+      while (rest - levels(i)._2.size > 0) {
+        val in = levels(i)._2
+        buffer ++= levels(i)._2
+        i += 1
+        rest = rest - in.size
+      }
+      if (rest > 0) {
+        val in = levels(i)._2
+        val sorted = NSGAII.crowdingDistanceAssignment(in, graph, lastTimestampCommunities).sortBy(_._2).map(_._1)
+        buffer ++= sorted.take(rest)
+      }
+      innerTimestampN(Population(buffer.toVector, lastPopulation.generationNum + 1), graph, maxGenerationNum, lastTimestampCommunities)
     }
   }
 
