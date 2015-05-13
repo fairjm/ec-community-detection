@@ -10,7 +10,19 @@ object NMI {
    * NMI(A,B)=2*H(A)/(H(A)+H(B))
    */
   def apply(a: Graph.Communities, b: Graph.Communities): Double = {
-    applyInner(communityToList(a), communityToList(b))
+    val (newA, newB) = intersectInput(a, b)
+    applyInner(communityToList(newA), communityToList(newB))
+  }
+
+  /**
+   * only select the elements that are both present in a and b
+   */
+  private def intersectInput(a: Graph.Communities, b: Graph.Communities): (Graph.Communities, Graph.Communities) = {
+    val aElems = a.reduceLeft((r, e) => r ++ e)
+    val bElems = b.reduceLeft((r, e) => r ++ e)
+    val aDiff = aElems.diff(bElems)
+    val bDiff = bElems.diff(aElems)
+    (a.map(e => e -- aDiff).filter(_.size > 0), b.map(e => e -- bDiff).filter(_.size > 0))
   }
 
   private def communityToList(comms: Graph.Communities): List[Int] = {
@@ -82,8 +94,11 @@ object NMI {
   def log2(i: Double): Double = Math.log(i) / Math.log(2)
 
   def main(args: Array[String]): Unit = {
-    val a = communityToList(List(Set("1", "2", "3", "4", "5", "6"), Set("7", "8", "9", "10", "11", "12"), Set("13", "14", "15", "16", "17")))
-    val b = communityToList(List(Set("2", "8", "9", "10", "11"), Set("1", "3", "4", "5", "6", "7", "13", "14"), Set("12", "15", "16", "17")))
+    val oAc = List(Set("99", "1", "2", "3", "4", "5", "6"), Set("7", "8", "9", "10", "11", "12"), Set("13", "14", "15", "16", "17"))
+    val oBc = List(Set("2", "8", "9", "10", "11"), Set("1", "3", "4", "5", "6", "7", "13", "14"), Set("12", "15", "16", "17"))
+    val (ac, bc) = intersectInput(oAc, oBc)
+    val a = communityToList(ac)
+    val b = communityToList(bc)
     println("a")
     println(P(1, a))
     println(P(2, a))
