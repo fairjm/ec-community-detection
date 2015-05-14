@@ -23,7 +23,10 @@ class WorkFlow {
    * the related props are from application.conf
    */
   def run(graphs: Graph*): Result = {
-    if (graphs.isEmpty) {
+
+    val graphArray = graphs.toArray
+
+    if (graphArray.isEmpty) {
       Result(Nil)
     } else {
       val chroms = ListBuffer[Chromosome]()
@@ -38,8 +41,9 @@ class WorkFlow {
       val tail = graphs.tail
       var lastBest = best
 
-      for (graph <- tail) {
-        val current = runTimestampN(graph, generationNum, lastBest)
+      for (index <- 1 until graphArray.size) {
+        println("timestamp-"+index)
+        val current = runTimestampN(graphArray(index), generationNum, lastBest)
         chroms += current
         lastBest = current
       }
