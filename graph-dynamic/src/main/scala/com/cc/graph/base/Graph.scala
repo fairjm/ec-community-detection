@@ -63,6 +63,26 @@ trait Graph {
 
   def getEdges = edges
   def getVertexes = vertexes
+
+  /**
+   *  get the neighbor node of the given node
+   */
+  def getNeighborVertexes(id: String): Set[String] = {
+    getNeighborVertexes(Vertex(id))
+  }
+
+  /**
+   *  get the neighbor node of the given node
+   */
+  def getNeighborVertexes(vertex: Vertex): Set[String] = {
+    if (!vertexes(vertex)) {
+      Set.empty
+    } else {
+      import scala.collection.JavaConversions._
+      val node = displayGraph.getNode[Node](vertex.id)
+      node.getNeighborNodeIterator[Node]().map(_.getId).toSet
+    }
+  }
 }
 
 object Graph {

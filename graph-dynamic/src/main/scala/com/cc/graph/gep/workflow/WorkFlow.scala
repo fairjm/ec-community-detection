@@ -42,7 +42,7 @@ class WorkFlow {
       var lastBest = best
 
       for (index <- 1 until graphArray.size) {
-        println("timestamp-"+index)
+        println("timestamp-" + index)
         val current = runTimestampN(graphArray(index), generationNum, lastBest)
         chroms += current
         lastBest = current
@@ -108,8 +108,6 @@ class WorkFlow {
         buffer ++= in
         i += 1
         rest = rest - in.size
-        println("inSize=" + in.size)
-        println("rest=" + rest)
       }
       if (rest > 0) {
         val in = levels(i)._2
@@ -185,15 +183,15 @@ object WorkFlow extends App {
   val workFlow = new WorkFlow with ModularitySelection
   val file = "src/main/resources/mo/real.t01.edges"
   val graph1 = Graph.load("src/main/resources/mo/real.t01.edges", seperator = " ")
-  val graph2 = Graph.load("src/main/resources/mo/real.t02.edges", seperator = " ")
+  //  val graph2 = Graph.load("src/main/resources/mo/real.t02.edges", seperator = " ")
   println(graph1)
-  val result = workFlow.run(graph1, graph2)
+  //  val result = workFlow.run(graph1, graph2)
+  val result = workFlow.run(graph1)
   val c1 = result.bests(0)
-  val c2 = result.bests(1)
+  //  val c2 = result.bests(1)
   println(c1)
-  println(c2)
+  //  println(c2)
   println(Modularity.compute(c1.toCommunityStyle, graph1).sum)
-  println(Modularity.compute(c2.toCommunityStyle, graph1).sum)
+  //  println(Modularity.compute(c2.toCommunityStyle, graph2).sum)
   //  graph1.displayCommunity(best.toCommunityStyle)
-
 }

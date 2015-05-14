@@ -26,6 +26,8 @@ class TestModularity extends WordSpec with MustMatchers {
       graph.addEdge(Edge.cons("8", "10"))
       graph.addEdge(Edge.cons("9", "10"))
 
+      println("1 neighor:" + graph.getNeighborVertexes("1"))
+
       val r = Modularity.compute(List(Set("1", "2", "3", "4"), Set("5", "6", "7"), Set("8", "9", "10")), ImmutableGraph.from(graph))
       println(r)
       assert(r.size == 3)
