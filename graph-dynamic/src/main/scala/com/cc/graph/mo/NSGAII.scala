@@ -24,17 +24,32 @@ object NSGAII {
     val s = HashMap[Chromosome, ListBuffer[Chromosome]]()
     val n = HashMap[Chromosome, Int]()
     val pLevel = HashMap[Int, ListBuffer[Chromosome]]()
+
+    val cache = HashMap[(String, Chromosome), Double]()
+    val popSize = pop.size
+
+    println("popSize:" + popSize)
+
+//    val uniquePop = pop.toSet.toArray
+//    val uniquePopSize = uniquePop.size
+//    println("unique size:" + uniquePopSize)
+
     for {
-      p <- pop
-      q <- pop
-      if p != q //no meaning compare itself
+      i <- 0 until popSize
+      j <- i + 1 until popSize
     } {
-      if (dominated(p, q, graph, lastTimeBest)) {
+      val p = pop(i)
+      val q = pop(j)
+
+      if (dominated(p, q, graph, lastTimeBest, cache)) {
         s.getOrElseUpdate(p, ListBuffer()) += q
-      } else if (dominated(q, p, graph, lastTimeBest)) {
+        n.update(q, n.getOrElse(q, 0) + 1)
+      } else if (dominated(q, p, graph, lastTimeBest, cache)) {
+        s.getOrElseUpdate(q, ListBuffer()) += p
         n.update(p, n.getOrElse(p, 0) + 1)
       }
     }
+
     for (p <- pop) {
       if (n.getOrElse(p, 0) == 0) {
         pLevel.getOrElseUpdate(1, ListBuffer()) += p
@@ -50,13 +65,13 @@ object NSGAII {
         q <- s.getOrElse(p, Nil)
       } {
         val nq = n.get(q).get
-        if (nq == 0) h += q
+        if (nq - 1 == 0) h += q
         n.update(q, nq - 1)
       }
       i = i + 1
       pLevel.update(i, h)
     }
-    pLevel.toStream.filter(_._2.size > 0).map(e => (e._1,e._2.toList)).toVector.sortBy(_._1)
+    pLevel.toStream.filter(_._2.size > 0).map(e => (e._1, e._2.toList)).toVector.sortBy(_._1)
   }
 
   def crowdingDistanceAssignment(pop: Pop, graph: Graph, lastTimeBest: Chromosome): List[(Chromosome, Double)] = {
@@ -86,14 +101,14 @@ object NSGAII {
     popWithDistance.map(e => (e.getChrom, e.distance)).toList
   }
 
-  def dominated(c1: Chromosome, c2: Chromosome, graph: Graph, lastTimeBest: Chromosome): Boolean = {
-    val mc1 = Modularity.compute(c1.toCommunityStyle, graph).sum
-    val mc2 = Modularity.compute(c2.toCommunityStyle, graph).sum
+  def dominated(c1: Chromosome, c2: Chromosome, graph: Graph, lastTimeBest: Chromosome, cache: HashMap[(String, Chromosome), Double]): Boolean = {
+    val mc1 = cache.getOrElseUpdate(("modularity", c1), Modularity.compute(c1.toCommunityStyle, graph).sum)
+    val mc2 = cache.getOrElseUpdate(("modularity", c2), Modularity.compute(c2.toCommunityStyle, graph).sum)
     if (mc1 < mc2) {
       false
     } else {
-      val nmic1 = NMI(c1.toCommunityStyle, lastTimeBest.toCommunityStyle)
-      val nmic2 = NMI(c2.toCommunityStyle, lastTimeBest.toCommunityStyle)
+      val nmic1 = cache.getOrElseUpdate(("nmi", c1), NMI(c1.toCommunityStyle, lastTimeBest.toCommunityStyle))
+      val nmic2 = cache.getOrElseUpdate(("nmi", c2), NMI(c2.toCommunityStyle, lastTimeBest.toCommunityStyle))
       if (nmic1 < nmic2) {
         false
       } else {

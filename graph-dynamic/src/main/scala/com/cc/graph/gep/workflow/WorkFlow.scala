@@ -91,16 +91,21 @@ class WorkFlow {
         operateChromosome(chrom, graph)
       }
       val mixed = p ++ q
+      println("mixed size:" + mixed.size)
       val levels = NSGAII.fastNondominatedSort(mixed, graph, lastTimestampCommunities)
-
+      println("levels count:" + levels.map(_._2.size).sum)
+      println("levels length:" + levels.length)
+      println("length:" + length)
       var rest = length
       var i = 0
       val buffer = ListBuffer[Chromosome]()
-      while (rest - levels(i)._2.size > 0) {
+      while (rest > 0 && rest - levels(i)._2.size > 0) {
         val in = levels(i)._2
-        buffer ++= levels(i)._2
+        buffer ++= in
         i += 1
         rest = rest - in.size
+        println("inSize=" + in.size)
+        println("rest=" + rest)
       }
       if (rest > 0) {
         val in = levels(i)._2
@@ -164,11 +169,27 @@ class WorkFlow {
 }
 
 object WorkFlow extends App {
+
+  //  val workFlow = new WorkFlow with ModularitySelection
+  //  val graph = Graph.load("src/main/resources/test2.txt")
+  //  val result = workFlow.run(graph)
+  //  val best = result.bests(0)
+  //  println(best)
+  //  println(Modularity.compute(best.toCommunityStyle, graph).sum)
+  //  graph.displayCommunity(best.toCommunityStyle)
+
   val workFlow = new WorkFlow with ModularitySelection
-  val graph = Graph.load("src/main/resources/test2.txt")
-  val result = workFlow.run(graph)
-  val best = result.bests(0)
-  println(best)
-  println(Modularity.compute(best.toCommunityStyle, graph).sum)
-  graph.displayCommunity(best.toCommunityStyle)
+  val file = "src/main/resources/mo/real.t01.edges"
+  val graph1 = Graph.load("src/main/resources/mo/real.t01.edges", seperator = " ")
+  val graph2 = Graph.load("src/main/resources/mo/real.t02.edges", seperator = " ")
+  println(graph1)
+  val result = workFlow.run(graph1, graph2)
+  val c1 = result.bests(0)
+  val c2 = result.bests(1)
+  println(c1)
+  println(c2)
+  println(Modularity.compute(c1.toCommunityStyle, graph1).sum)
+  println(Modularity.compute(c2.toCommunityStyle, graph1).sum)
+  //  graph1.displayCommunity(best.toCommunityStyle)
+
 }

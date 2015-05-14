@@ -49,7 +49,7 @@ trait Graph {
             if e1 < e2
           } {
             if (edges.contains(Edge.cons(e1, e2))) {
-              displayGraph.getEdge[org.graphstream.graph.Edge](e1 + e2).addAttribute("ui.style", s"fill-color: $colorString;")
+              displayGraph.getEdge[org.graphstream.graph.Edge](e1 + "edges" + e2).addAttribute("ui.style", s"fill-color: $colorString;")
             }
           }
         }
@@ -75,8 +75,8 @@ object Graph {
       val g = source.getLines().toStream
         .map(_.trim())
         .filter(_.length() > 0)
-        .map(_.split(seperator))
-        .filter(_.size == 2)
+        .map(_.split(seperator).filter(_.size > 0))
+        .filter(_.size >= 2)
         .foldLeft(MutableGraph(graphName)) { (r, e) => r.addEdge(Edge.cons(Vertex(e(0).trim()), Vertex(e(1).trim()))) }
       ImmutableGraph.from(g)
     } finally { source.close() }
@@ -183,7 +183,7 @@ class MutableGraph private (
         addVertex(v1)
         addVertex(v2)
         edges = edges + edge
-        displayGraph.addEdge(v1.id + v2.id, v1.id, v2.id)
+        displayGraph.addEdge(v1.id + "edges" + v2.id, v1.id, v2.id)
       }
     }
     this
