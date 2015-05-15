@@ -10,8 +10,14 @@ import com.cc.graph.gep.Chromosome
 import com.cc.graph.gep.Gene
 import com.cc.graph.gep.Population
 import com.cc.graph.mo.NSGAII
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import com.cc.graph.algorithm.NMI
 
 case class Result(bests: List[Chromosome])
+
 class WorkFlow {
 
   selection: SelectionStrategy =>
@@ -55,6 +61,7 @@ class WorkFlow {
   private def runTimestamp0(graph: Graph, maxGenerationNum: Int): Chromosome = {
     val initPopulation = Population.generate(graph, populationSize)
     val lastPop = innerTimestamp0(initPopulation, graph, generationNum)
+    // get the best result back
     selection.choose(lastPop.chromosomes, graph, 0).best.get
   }
 
@@ -66,10 +73,13 @@ class WorkFlow {
     } else {
       // remain one positive for the best
       val choosedChroms = selection.choose(lastPopulation.chromosomes, graph, lastPopulation.chromosomes.size - 1)
-      val mutatedChroms = for (chrom <- choosedChroms.selected) yield {
-        operateChromosome(chrom, graph)
+      val mutatedChromsFutures = for (chrom <- choosedChroms.selected) yield {
+        // use Future for concurrency
+        Future(operateChromosome(chrom, graph))
       }
+      // choose the best one
       val theRemainedOne = choosedChroms.best.getOrElse(Chromosome.generate(graph))
+      val mutatedChroms = mutatedChromsFutures.map(f => Await.result(f, 10 seconds))
       val newPopulation = Population(mutatedChroms :+ theRemainedOne, lastPopulation.generationNum + 1)
       innerTimestamp0(newPopulation, graph, maxGenerationNum)
     }
@@ -91,9 +101,12 @@ class WorkFlow {
     } else {
       val p = lastPopulation.chromosomes
       val length = p.size
-      val q = for (chrom <- p) yield {
-        operateChromosome(chrom, graph)
+      val qFutures = for (chrom <- p) yield {
+        // use Future for concurrency
+        Future(operateChromosome(chrom, graph))
       }
+      val q = qFutures.map(f => Await.result(f, 10 seconds))
+      // get the mixed chroms(twice length of the original one)
       val mixed = p ++ q
       println("mixed size:" + mixed.size)
       val levels = NSGAII.fastNondominatedSort(mixed, graph, lastTimestampCommunities)
@@ -118,14 +131,21 @@ class WorkFlow {
     }
   }
 
+  /**
+   * operate chromosome(mutation)<br>
+   * thread safe
+   */
   private def operateChromosome(chrom: Chromosome, graph: Graph): Chromosome = {
     val random = TLRandom.current()
     val ls = ListBuffer[Gene]()
     ls ++= chrom.genes
-    if (random.nextDouble() < geneMove) {
+    if (ls.size == 1) {
+      doGeneSplitOff(ls)
+    }
+    while (random.nextDouble() < geneMove) {
       doGeneMove(ls)
     }
-    if (random.nextDouble() < geneExchange) {
+    while (random.nextDouble() < geneExchange) {
       doGeneExchange(ls)
     }
     if (random.nextDouble() < geneSplitoff) {
@@ -164,34 +184,46 @@ class WorkFlow {
   private def doGeneMerge(genes: ListBuffer[Gene], graph: Graph): Unit = {
     val random = TLRandom.current()
     val chrom = Chromosome(genes: _*)
-    val g1 = genes.remove(random.nextInt(genes.size))
-    val g2 = genes.remove(random.nextInt(genes.size))
-    genes += Gene.merge(g1, g2)
+    if (genes.size > 1) {
+      val g1 = genes.remove(random.nextInt(genes.size))
+      val g2 = genes.remove(random.nextInt(genes.size))
+      genes += Gene.merge(g1, g2)
+    }
   }
 }
 
 object WorkFlow extends App {
 
-  //  val workFlow = new WorkFlow with ModularitySelection
-  //  val graph = Graph.load("src/main/resources/test2.txt")
-  //  val result = workFlow.run(graph)
-  //  val best = result.bests(0)
-  //  println(best)
-  //  println(Modularity.compute(best.toCommunityStyle, graph).sum)
-  //  graph.displayCommunity(best.toCommunityStyle)
+  runMoGraphN()
 
-  val workFlow = new WorkFlow with ModularitySelection
-  val file = "src/main/resources/mo/real.t01.edges"
-  val graph1 = Graph.load("src/main/resources/mo/real.t01.edges", seperator = " ")
-  //  val graph2 = Graph.load("src/main/resources/mo/real.t02.edges", seperator = " ")
-  println(graph1)
-  //  val result = workFlow.run(graph1, graph2)
-  val result = workFlow.run(graph1)
-  val c1 = result.bests(0)
-  //  val c2 = result.bests(1)
-  println(c1)
-  //  println(c2)
-  println(Modularity.compute(c1.toCommunityStyle, graph1).sum)
-  //  println(Modularity.compute(c2.toCommunityStyle, graph2).sum)
-  //  graph1.displayCommunity(best.toCommunityStyle)
+  def runMoGraphN() = {
+    val workFlow = new WorkFlow with ModularitySelection
+    val graph1 = Graph.load("src/main/resources/mo/real.t01.edges", seperator = " ")
+    val graph2 = Graph.load("src/main/resources/mo/real.t02.edges", seperator = " ")
+    val result = workFlow.run(graph1, graph2)
+    val bests = result.bests zip List(graph1, graph2)
+    println("modurity:")
+    bests.foreach(e => println(Modularity.compute(e._1.toCommunityStyle, e._2).sum))
+    println("NMI")
+    println(NMI(bests(0)._1.toCommunityStyle, bests(1)._1.toCommunityStyle))
+  }
+
+  def runMoGraph1() = {
+    val workFlow = new WorkFlow with ModularitySelection
+    val graph = Graph.load("src/main/resources/mo/real.t01.edges", seperator = " ")
+    val result = workFlow.run(graph)
+    val r = result.bests(0)
+    println(r)
+    println(Modularity.compute(r.toCommunityStyle, graph).sum)
+  }
+
+  def runZachary() = {
+    val workFlow = new WorkFlow with ModularitySelection
+    val graph = Graph.load("src/main/resources/Zachary.txt", seperator = ",")
+    val result = workFlow.run(graph)
+    val best = result.bests(0)
+    println(best)
+    println(Modularity.compute(best.toCommunityStyle, graph).sum)
+    graph.displayCommunity(best.toCommunityStyle)
+  }
 }

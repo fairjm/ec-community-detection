@@ -2,6 +2,9 @@ package com.cc.graph
 
 import com.typesafe.config.ConfigFactory
 
+/**
+ * configuration instance
+ */
 object Conf {
   private lazy val conf = ConfigFactory.load();
 

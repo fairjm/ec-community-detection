@@ -32,11 +32,13 @@ object NSGAII {
     val n = HashMap[Int, Int]()
     val pLevel = HashMap[Int, ListBuffer[Int]]()
 
+    // cache for keeping f result
     val cache = TrieMap[(String, Chromosome), Double]()
     val popSize = popArray.size
 
     println("popSize:" + popSize)
 
+    // compute s,n
     for {
       pIndex <- 0 until popSize
       qIndex <- pIndex + 1 until popSize
@@ -44,6 +46,7 @@ object NSGAII {
       val p = popArray(pIndex)
       val q = popArray(qIndex)
 
+      // if p dominate q the sp = sp + q, nq = nq + 1
       if (dominated(p, q, graph, lastTimeBest, cache)) {
         s.getOrElseUpdate(pIndex, ListBuffer()) += qIndex
         n.update(qIndex, n.getOrElse(qIndex, 0) + 1)
@@ -53,6 +56,7 @@ object NSGAII {
       }
     }
 
+    // get the first level(don't be dominated by any chroms)
     for (index <- 0 until popSize) {
       if (n.getOrElse(index, 0) == 0) {
         pLevel.getOrElseUpdate(1, ListBuffer()) += index
@@ -74,6 +78,7 @@ object NSGAII {
       i = i + 1
       pLevel.update(i, h)
     }
+    //first filter the empty level and then return levels(ascending order)
     pLevel.toStream.filter(_._2.size > 0).map(e => (e._1, e._2.map(index => popArray(index)).toList)).toVector.sortBy(_._1)
   }
 

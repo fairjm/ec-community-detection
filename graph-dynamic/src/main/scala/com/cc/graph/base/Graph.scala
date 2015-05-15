@@ -10,9 +10,11 @@ import org.graphstream.graph.implementations.SingleGraph
 import java.awt.Color
 import scala.collection.mutable.HashSet
 import scala.concurrent.forkjoin.ThreadLocalRandom
+import scala.collection.concurrent.TrieMap
 
 trait Graph {
 
+  // set graph renderer
   System.setProperty("org.graphstream.ui.renderer", "org.graphstream.ui.j2dviewer.J2DGraphRenderer");
 
   private[base] var edges: Set[Edge]
@@ -29,6 +31,10 @@ trait Graph {
     displayGraph.display
   }
 
+  /**
+   * display the community by the giving communities structure<br>
+   * List[Set[String]] the element Set[String] is a set of nodes of the community
+   */
   def displayCommunity(communities: Graph.Communities) = {
     import scala.collection.JavaConversions._
     displayGraph.getEdgeSet[org.graphstream.graph.Edge]().foreach(_.addAttribute("ui.style", "fill-color: rgba(0,0,0,128);"))
@@ -142,9 +148,10 @@ object Edge {
 }
 
 /**
- * mutable graph data structure
+ * mutable graph data structure<br/>
+ * not able to use outside
  */
-class MutableGraph private (
+private class MutableGraph private (
   override private[base] var edges: Set[Edge],
   override private[base] var vertexes: Set[Vertex],
   override private[base] val displayGraph: org.graphstream.graph.Graph) extends Graph {
@@ -210,8 +217,8 @@ class MutableGraph private (
   }
 }
 
-object MutableGraph {
-  def apply(name: String): MutableGraph = {
+private object MutableGraph {
+  private[base] def apply(name: String): MutableGraph = {
     val graph = new MultiGraph(name)
     graph.addAttribute("ui.stylesheet", s"url('${MutableGraph.getClass.getResource(".").toString()}stylesheet.css')")
     graph.addAttribute("ui.quality");
@@ -219,13 +226,14 @@ object MutableGraph {
     new MutableGraph(Set[Edge](), Set[Vertex](), graph)
   }
 
-  def from(g: Graph): MutableGraph = {
+  private[base] def from(g: Graph): MutableGraph = {
     new MutableGraph(g.edges, g.vertexes, g.displayGraph)
   }
 }
 
 /**
- * Immutable graph<br/> structure
+ * Immutable graph structure
+ * 不可变图(节点和边已经固定 无法新增 删除,但display可能改变)
  *
  */
 class ImmutableGraph private (
@@ -235,13 +243,28 @@ class ImmutableGraph private (
 
   override private[base] def edges_=(x$1: Set[Edge]): Unit = ???
   override private[base] def vertexes_=(x$1: Set[Vertex]): Unit = ???
+
+  private val neighborCache = TrieMap[String, Set[String]]()
+
+  override def getNeighborVertexes(vertex: Vertex) = {
+    neighborCache.getOrElseUpdate(vertex.id, super.getNeighborVertexes(vertex))
+  }
 }
 
 object ImmutableGraph {
+  private lazy val empty = new ImmutableGraph(Set[Edge](), Set[Vertex](), new SingleGraph(Conf.projectName))
+  /**
+   * make a new empty immutableGraph
+   * 返回一个空的不可变图
+   */
   def apply(): ImmutableGraph = {
-    new ImmutableGraph(Set[Edge](), Set[Vertex](), new SingleGraph(Conf.projectName))
+    empty
   }
 
+  /**
+   * convert graph g to an immuatble graph
+   * 将传入的图转变为不可变图
+   */
   def from(g: Graph): ImmutableGraph = {
     new ImmutableGraph(g.edges, g.vertexes, g.displayGraph)
   }

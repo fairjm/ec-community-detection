@@ -20,17 +20,29 @@ trait SelectionStrategy {
   def choose(chroms: Vector[Chromosome], graph: Graph): SelectionResult = choose(chroms, graph, chroms.size)
 }
 
+/**
+ * selection by the modularity
+ */
 trait ModularitySelection extends SelectionStrategy {
+
+  /**
+   * given the chroms which the chromosome to choose from <br>
+   * the graph which the chroms according to <br>
+   * and the num of how many chroms to be choosed
+   */
   def choose(chroms: Vector[Chromosome], graph: Graph, chooseNum: Int): SelectionResult = {
     if (chroms.size == 0) {
       SelectionResult(None, chroms, Vector.empty)
     } else {
+      // compute modularity of each chrom
       val modularities = for (chrom <- chroms) yield {
         val communities = chrom.toCommunityStyle
         val modularities = Modularity.compute(communities, graph)
         modularities.sum
       }
+      // sort the chroms by the modularity(descending order) the result is (chrom1,its modularity),(chrom2,its modularity)
       val values = (chroms zip modularities).sortBy(-1 * _._2)
+      // get the best chrom(the first elements above
       val best = values(0)._1
       if (chooseNum <= 0) {
         SelectionResult(Some(best), Vector.empty, values)

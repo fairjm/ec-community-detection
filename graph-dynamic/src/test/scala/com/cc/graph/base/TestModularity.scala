@@ -1,8 +1,7 @@
-package com.cc.graph
+package com.cc.graph.base
 
 import org.scalatest.WordSpec
 import org.scalatest.MustMatchers
-import com.cc.graph.base._
 import com.cc.graph.algorithm.Modularity
 
 class TestModularity extends WordSpec with MustMatchers {
