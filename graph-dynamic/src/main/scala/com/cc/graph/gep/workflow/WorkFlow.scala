@@ -90,7 +90,7 @@ class WorkFlow {
     val lastPop = innerTimestampN(initPopulation, graph, generationNum, lastTimestampCommunities)
     val levels = NSGAII.fastNondominatedSort(lastPop.chromosomes, graph, lastTimestampCommunities)
     // choose the max modularity of the first level
-    levels(0)._2.maxBy(chrom => Modularity.compute(chrom.toCommunityStyle, graph).sum)
+    levels(0)._2.maxBy(chrom => Modularity.compute(chrom.toCommunityStyle, graph).sum + NMI(chrom.toCommunityStyle, lastTimestampCommunities.toCommunityStyle))
   }
 
   @tailrec
@@ -197,15 +197,33 @@ object WorkFlow extends App {
   runMoGraphN()
 
   def runMoGraphN() = {
+    // new workflow with ModularitySelection
     val workFlow = new WorkFlow with ModularitySelection
+    // load graphs
     val graph1 = Graph.load("src/main/resources/mo/real.t01.edges", seperator = " ")
     val graph2 = Graph.load("src/main/resources/mo/real.t02.edges", seperator = " ")
-    val result = workFlow.run(graph1, graph2)
-    val bests = result.bests zip List(graph1, graph2)
+    val graph3 = Graph.load("src/main/resources/mo/real.t03.edges", seperator = " ")
+    val graph4 = Graph.load("src/main/resources/mo/real.t04.edges", seperator = " ")
+    val graph5 = Graph.load("src/main/resources/mo/real.t05.edges", seperator = " ")
+    val graph6 = Graph.load("src/main/resources/mo/real.t06.edges", seperator = " ")
+    val graph7 = Graph.load("src/main/resources/mo/real.t07.edges", seperator = " ")
+    val graph8 = Graph.load("src/main/resources/mo/real.t08.edges", seperator = " ")
+    val graph9 = Graph.load("src/main/resources/mo/real.t09.edges", seperator = " ")
+    val graph10 = Graph.load("src/main/resources/mo/real.t010.edges", seperator = " ")
+
+    val graphs = List(graph1, graph2, graph3, graph4, graph5, graph6, graph7, graph8, graph9, graph10)
+    // run
+    val result = workFlow.run(graphs:_*)
+    val bests = result.bests zip graphs
+
     println("modurity:")
+    // compute each modularity
     bests.foreach(e => println(Modularity.compute(e._1.toCommunityStyle, e._2).sum))
+
     println("NMI")
-    println(NMI(bests(0)._1.toCommunityStyle, bests(1)._1.toCommunityStyle))
+    // compute NMI(sliding is used to group neighbor result: List(1,2,3) => List(List(1,2),List(2,3))
+    bests.map(_._1).sliding(2).foreach(es => println(NMI(es(0).toCommunityStyle, es(1).toCommunityStyle)))
+
   }
 
   def runMoGraph1() = {
