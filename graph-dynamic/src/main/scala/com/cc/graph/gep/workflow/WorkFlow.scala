@@ -89,8 +89,11 @@ class WorkFlow {
     val initPopulation = Population.generate(graph, populationSize)
     val lastPop = innerTimestampN(initPopulation, graph, generationNum, lastTimestampCommunities)
     val levels = NSGAII.fastNondominatedSort(lastPop.chromosomes, graph, lastTimestampCommunities)
-    // choose the max modularity of the first level
-    levels(0)._2.maxBy(chrom => Modularity.compute(chrom.toCommunityStyle, graph).sum + NMI(chrom.toCommunityStyle, lastTimestampCommunities.toCommunityStyle))
+    val moCache = scala.collection.mutable.Map[Chromosome, Double]()
+    val nmiCache = scala.collection.mutable.Map[Chromosome, Double]()
+    val moSum = levels(0)._2.map(e => moCache.getOrElseUpdate(e, Modularity.compute(e.toCommunityStyle, graph).sum)).sum
+    val nmiSum = levels(0)._2.map(e => nmiCache.getOrElseUpdate(e, NMI(e.toCommunityStyle, lastTimestampCommunities.toCommunityStyle))).sum
+    levels(0)._2.maxBy(chrom => moCache.getOrElseUpdate(chrom, Modularity.compute(chrom.toCommunityStyle, graph).sum) / moSum + nmiCache.getOrElseUpdate(chrom, NMI(chrom.toCommunityStyle, lastTimestampCommunities.toCommunityStyle)) / nmiSum)
   }
 
   @tailrec
@@ -108,11 +111,11 @@ class WorkFlow {
       val q = qFutures.map(f => Await.result(f, 10 seconds))
       // get the mixed chroms(twice length of the original one)
       val mixed = p ++ q
-      println("mixed size:" + mixed.size)
+      //      println("mixed size:" + mixed.size)
       val levels = NSGAII.fastNondominatedSort(mixed, graph, lastTimestampCommunities)
-      println("levels count:" + levels.map(_._2.size).sum)
-      println("levels length:" + levels.length)
-      println("length:" + length)
+      //      println("levels count:" + levels.map(_._2.size).sum)
+      //      println("levels length:" + levels.length)
+      //      println("length:" + length)
       var rest = length
       var i = 0
       val buffer = ListBuffer[Chromosome]()
@@ -142,10 +145,10 @@ class WorkFlow {
     if (ls.size == 1) {
       doGeneSplitOff(ls)
     }
-    while (random.nextDouble() < geneMove) {
+    if (random.nextDouble() < geneMove) {
       doGeneMove(ls)
     }
-    while (random.nextDouble() < geneExchange) {
+    if (random.nextDouble() < geneExchange) {
       doGeneExchange(ls)
     }
     if (random.nextDouble() < geneSplitoff) {
@@ -194,45 +197,38 @@ class WorkFlow {
 
 object WorkFlow extends App {
 
-  runMoGraphN()
+  runFootballN()
+
+  def runFootballN() = {
+    val files = List(
+      "src/main/resources/football/edges.1.1.txt",
+      "src/main/resources/football/edges.1.2.txt",
+      "src/main/resources/football/edges.1.3.txt")
+    runN(" ", files: _*)
+  }
+
+  def runFootball1() = {
+    run1(seperator = " ", file = "src/main/resources/football/edges.1.1.txt")
+  }
 
   def runMoGraphN() = {
-    // new workflow with ModularitySelection
-    val workFlow = new WorkFlow with ModularitySelection
-    // load graphs
-    val graph1 = Graph.load("src/main/resources/mo/real.t01.edges", seperator = " ")
-    val graph2 = Graph.load("src/main/resources/mo/real.t02.edges", seperator = " ")
-    val graph3 = Graph.load("src/main/resources/mo/real.t03.edges", seperator = " ")
-    val graph4 = Graph.load("src/main/resources/mo/real.t04.edges", seperator = " ")
-    val graph5 = Graph.load("src/main/resources/mo/real.t05.edges", seperator = " ")
-    val graph6 = Graph.load("src/main/resources/mo/real.t06.edges", seperator = " ")
-    val graph7 = Graph.load("src/main/resources/mo/real.t07.edges", seperator = " ")
-    val graph8 = Graph.load("src/main/resources/mo/real.t08.edges", seperator = " ")
-    val graph9 = Graph.load("src/main/resources/mo/real.t09.edges", seperator = " ")
-    val graph10 = Graph.load("src/main/resources/mo/real.t010.edges", seperator = " ")
-
-    val graphs = List(graph1, graph2, graph3, graph4, graph5, graph6, graph7, graph8, graph9, graph10)
-    // run
-    val result = workFlow.run(graphs:_*)
-    val bests = result.bests zip graphs
-
-    println("modurity:")
-    // compute each modularity
-    bests.foreach(e => println(Modularity.compute(e._1.toCommunityStyle, e._2).sum))
-
-    println("NMI")
-    // compute NMI(sliding is used to group neighbor result: List(1,2,3) => List(List(1,2),List(2,3))
-    bests.map(_._1).sliding(2).foreach(es => println(NMI(es(0).toCommunityStyle, es(1).toCommunityStyle)))
+    val files = List(
+      "src/main/resources/mo/real.t01.edges",
+      "src/main/resources/mo/real.t02.edges",
+      "src/main/resources/mo/real.t03.edges",
+      "src/main/resources/mo/real.t04.edges",
+      "src/main/resources/mo/real.t05.edges",
+      "src/main/resources/mo/real.t06.edges",
+      "src/main/resources/mo/real.t07.edges",
+      "src/main/resources/mo/real.t08.edges",
+      "src/main/resources/mo/real.t09.edges",
+      "src/main/resources/mo/real.t010.edges")
+    runN(" ", files: _*)
 
   }
 
   def runMoGraph1() = {
-    val workFlow = new WorkFlow with ModularitySelection
-    val graph = Graph.load("src/main/resources/mo/real.t01.edges", seperator = " ")
-    val result = workFlow.run(graph)
-    val r = result.bests(0)
-    println(r)
-    println(Modularity.compute(r.toCommunityStyle, graph).sum)
+    run1(seperator = " ", file = "src/main/resources/mo/real.t01.edges")
   }
 
   def runZachary() = {
@@ -243,5 +239,42 @@ object WorkFlow extends App {
     println(best)
     println(Modularity.compute(best.toCommunityStyle, graph).sum)
     graph.displayCommunity(best.toCommunityStyle)
+  }
+
+  def run1(seperator: String, file: String) = {
+    val workFlow = new WorkFlow with ModularitySelection
+    val graph = Graph.load(file, seperator = seperator)
+    val result = workFlow.run(graph)
+    val r = result.bests(0)
+    println(r)
+    println("node size:" + graph.getVertexes.size)
+    println(Modularity.compute(r.toCommunityStyle, graph).sum)
+    println(r.genes.size)
+  }
+
+  def runN(seperator: String, files: String*) = {
+    val workFlow = new WorkFlow with ModularitySelection
+    val graphs = files.map(file => Graph.load(file, seperator = seperator))
+    val result = workFlow.run(graphs: _*)
+    val bests = result.bests zip graphs
+
+    println("edge size:")
+    graphs.foreach(g => println(g.getEdges.size))
+
+    println("node size:")
+    // print node size
+    graphs.foreach(g => println(g.getVertexes.size))
+
+    println("comm size:")
+    // print comm size
+    result.bests.foreach(e => println(e.genes.size))
+
+    println("modurity:")
+    // compute each modularity
+    bests.foreach(e => println(Modularity.compute(e._1.toCommunityStyle, e._2).sum))
+
+    println("NMI")
+    // compute NMI(sliding is used to group neighbor result: List(1,2,3) => List(List(1,2),List(2,3))
+    bests.map(_._1).sliding(2).foreach(es => println(NMI(es(0).toCommunityStyle, es(1).toCommunityStyle)))
   }
 }

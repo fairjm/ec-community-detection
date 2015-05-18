@@ -36,8 +36,6 @@ object NSGAII {
     val cache = TrieMap[(String, Chromosome), Double]()
     val popSize = popArray.size
 
-    println("popSize:" + popSize)
-
     // compute s,n
     for {
       pIndex <- 0 until popSize
