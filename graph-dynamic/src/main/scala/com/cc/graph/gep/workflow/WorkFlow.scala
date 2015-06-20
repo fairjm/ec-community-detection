@@ -53,7 +53,6 @@ class WorkFlow {
         chroms += current
         lastBest = current
       }
-
       Result(chroms.toList)
     }
   }
@@ -71,16 +70,22 @@ class WorkFlow {
     if (lastPopulation.generationNum >= maxGenerationNum) {
       lastPopulation
     } else {
-      // remain one positive for the best
-      val choosedChroms = selection.choose(lastPopulation.chromosomes, graph, lastPopulation.chromosomes.size - 1)
-      val mutatedChromsFutures = for (chrom <- choosedChroms.selected) yield {
+
+      val mutatedChromsFutures = for (chrom <- lastPopulation.chromosomes) yield {
         // use Future for concurrency
         Future(operateChromosome(chrom, graph))
       }
+
+      val mutatedChroms = mutatedChromsFutures.map(f => Await.result(f, 10 seconds))
+
+      // remain one positive for the best
+      val choosedChroms = selection.choose(lastPopulation.chromosomes ++ mutatedChroms, graph, lastPopulation.chromosomes.size - 1)
+
       // choose the best one
       val theRemainedOne = choosedChroms.best.getOrElse(Chromosome.generate(graph))
-      val mutatedChroms = mutatedChromsFutures.map(f => Await.result(f, 10 seconds))
-      val newPopulation = Population(mutatedChroms :+ theRemainedOne, lastPopulation.generationNum + 1)
+      println(Modularity.compute(theRemainedOne.toCommunityStyle, graph).sum)
+
+      val newPopulation = Population(choosedChroms.selected :+ theRemainedOne, lastPopulation.generationNum + 1)
       innerTimestamp0(newPopulation, graph, maxGenerationNum)
     }
   }
@@ -197,7 +202,22 @@ class WorkFlow {
 
 object WorkFlow extends App {
 
-  runFootballN()
+  //  showZacharyInit()
+  //  runFootball1()
+  //  run1(seperator = " ", file = "src/main/resources/football/edges.1.1.txt")
+
+  //    runZachary()
+  //  runDolphin
+  runFootballSelf()
+
+  //  val graph = Graph.load("src/main/resources/Zachary.txt", seperator = ",")
+  //  val r = Modularity.compute(List(Set("9","10","15","16","19","21","23","24","25","26","27","28","29","30","31","32","33","34"),
+  //    Set("1","2","3","4","5","6","7","8","11","12","13","14","17","18","20","22")), graph)
+  //  println(r.sum)
+
+  //    val graph = Graph.load("src/main/resources/football/edges.1.1.txt", seperator = " ")
+  //    println(graph.getVertexes.toList.map(a => Integer.valueOf(a.id)).sorted)
+  //    println(graph.getVertexes.size)
 
   def runFootballN() = {
     val files = List(
@@ -207,8 +227,20 @@ object WorkFlow extends App {
     runN(" ", files: _*)
   }
 
+  def runFootballSelf() = {
+    val files = List(
+      "src/main/resources/football/edges.1.1.txt",
+      "src/main/resources/football/edges.1.1.txt",
+      "src/main/resources/football/edges.1.1.txt")
+    runN(" ", files: _*)
+  }
+
   def runFootball1() = {
-    run1(seperator = " ", file = "src/main/resources/football/edges.1.1.txt")
+    val r1 = run1(seperator = " ", file = "src/main/resources/football/edges.1.1.txt")
+    val r2 = run1(seperator = " ", file = "src/main/resources/football/edges.1.2.txt")
+    val r3 = run1(seperator = " ", file = "src/main/resources/football/edges.1.3.txt")
+    println(NMI(r1.toCommunityStyle, r2.toCommunityStyle))
+    println(NMI(r2.toCommunityStyle, r3.toCommunityStyle))
   }
 
   def runMoGraphN() = {
@@ -224,7 +256,6 @@ object WorkFlow extends App {
       "src/main/resources/mo/real.t09.edges",
       "src/main/resources/mo/real.t010.edges")
     runN(" ", files: _*)
-
   }
 
   def runMoGraph1() = {
@@ -241,6 +272,16 @@ object WorkFlow extends App {
     graph.displayCommunity(best.toCommunityStyle)
   }
 
+  def runDolphin() = {
+    val workFlow = new WorkFlow with ModularitySelection
+    val graph = Graph.load("src/main/resources/Dolphin.txt", seperator = ",")
+    val result = workFlow.run(graph)
+    val best = result.bests(0)
+    println(best)
+    println(Modularity.compute(best.toCommunityStyle, graph).sum)
+    graph.displayCommunity(best.toCommunityStyle)
+  }
+
   def run1(seperator: String, file: String) = {
     val workFlow = new WorkFlow with ModularitySelection
     val graph = Graph.load(file, seperator = seperator)
@@ -250,6 +291,7 @@ object WorkFlow extends App {
     println("node size:" + graph.getVertexes.size)
     println(Modularity.compute(r.toCommunityStyle, graph).sum)
     println(r.genes.size)
+    r
   }
 
   def runN(seperator: String, files: String*) = {
