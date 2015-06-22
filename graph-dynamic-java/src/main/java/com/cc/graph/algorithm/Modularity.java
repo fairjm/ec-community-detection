@@ -5,11 +5,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.cc.graph.algorithm.params.BaseParams;
+import com.cc.graph.algorithm.params.ModularityParams;
 import com.cc.graph.base.Edge;
 import com.cc.graph.base.Graph;
 
-public class Modularity implements Algorithm<BaseParams> {
+public class Modularity implements Algorithm<ModularityParams> {
 
     public static final Modularity instance  = new Modularity();
 
@@ -17,7 +17,7 @@ public class Modularity implements Algorithm<BaseParams> {
     }
 
     @Override
-    public double compute(final BaseParams params) {
+    public double compute(final ModularityParams params) {
         final List<Set<String>> comms = params.comms;
         final Graph graph = params.graph;
         final int commSize = comms.size();

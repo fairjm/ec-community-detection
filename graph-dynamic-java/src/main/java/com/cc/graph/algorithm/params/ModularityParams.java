@@ -6,16 +6,16 @@ import java.util.Set;
 
 import com.cc.graph.base.ImmutableGraph;
 
-public class BaseParams implements Params {
+public class ModularityParams implements Params {
 
     public final List<Set<String>> comms;
     public final ImmutableGraph graph;
 
-    public static BaseParams construct(final List<Set<String>> comms, final ImmutableGraph graph){
-        return new BaseParams(comms, graph);
+    public static ModularityParams construct(final List<Set<String>> comms, final ImmutableGraph graph){
+        return new ModularityParams(comms, graph);
     }
 
-    protected BaseParams(final List<Set<String>> comms, final ImmutableGraph graph) {
+    protected ModularityParams(final List<Set<String>> comms, final ImmutableGraph graph) {
         super();
         this.comms = Collections.unmodifiableList(comms);
         this.graph = graph;
@@ -38,7 +38,7 @@ public class BaseParams implements Params {
             return false;
         if (this.getClass() != obj.getClass())
             return false;
-        final BaseParams other = (BaseParams) obj;
+        final ModularityParams other = (ModularityParams) obj;
         if (this.comms == null) {
             if (other.comms != null)
                 return false;

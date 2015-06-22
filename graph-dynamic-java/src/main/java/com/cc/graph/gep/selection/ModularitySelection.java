@@ -8,7 +8,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.cc.graph.algorithm.Modularity;
-import com.cc.graph.algorithm.params.BaseParams;
+import com.cc.graph.algorithm.params.ModularityParams;
 import com.cc.graph.base.ImmutableGraph;
 import com.cc.graph.gep.Chromosome;
 
@@ -23,7 +23,7 @@ public class ModularitySelection implements SelectionStrategy {
         }
         final List<Double> modularities = chroms.stream().map(c -> {
             final List<Set<String>> comms = c.toCommunityStyle();
-            final double result = Modularity.instance.compute(BaseParams.construct(comms, graph));
+            final double result = Modularity.instance.compute(ModularityParams.construct(comms, graph));
             return result < 0 ? 0 : result;
         }).collect(Collectors.toList());
 

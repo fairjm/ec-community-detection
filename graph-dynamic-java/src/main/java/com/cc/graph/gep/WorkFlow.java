@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import com.cc.graph.Conf;
 import com.cc.graph.algorithm.Modularity;
-import com.cc.graph.algorithm.params.BaseParams;
+import com.cc.graph.algorithm.params.ModularityParams;
 import com.cc.graph.base.GraphUtil;
 import com.cc.graph.base.ImmutableGraph;
 import com.cc.graph.gep.selection.ModularitySelection;
@@ -182,7 +182,7 @@ public class WorkFlow {
         final List<Chromosome> ccs = new ArrayList<>(cs);
         final List<Double> modularities = ccs.stream().map(c -> {
             final List<Set<String>> communities = c.toCommunityStyle();
-            return Modularity.instance.compute(BaseParams.construct(communities, graph));
+            return Modularity.instance.compute(ModularityParams.construct(communities, graph));
         }).collect(Collectors.toList());
         double bestModularity = -1;
         int bestIndex = 0;
