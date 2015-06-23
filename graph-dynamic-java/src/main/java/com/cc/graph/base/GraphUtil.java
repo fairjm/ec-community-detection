@@ -20,4 +20,11 @@ public class GraphUtil {
                 }, (r1, r2) -> r1);
         return graph.freeze();
     }
+
+    public static void main(final String[] args) throws IOException {
+        final ImmutableGraph graph = GraphUtil.load("src/main/resources/test.txt");
+        System.out.println(graph.getVertexs());
+        System.out.println(graph.getNeighbors("4"));
+        graph.display();
+    }
 }

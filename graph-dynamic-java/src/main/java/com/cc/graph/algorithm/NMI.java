@@ -10,21 +10,21 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import com.cc.graph.algorithm.params.NMIParams;
+import com.cc.graph.gep.Chromosome;
 
-public class NMI implements Algorithm<NMIParams> {
+public class NMI implements Algorithm {
 
-    public static final NMI instance = new NMI();
+    private final Chromosome lastSolution;
 
-    private NMI() {
-
+    public NMI(final Chromosome lastSolution) {
+        this.lastSolution = lastSolution;
     }
 
     @Override
-    public double compute(final NMIParams params) {
+    public double compute(final Chromosome solution) {
         // 选取元素交集
-        List<Set<String>> c1 = params.comms;
-        List<Set<String>> c2 = params.lastTimestampComms;
+        List<Set<String>> c1 = solution.toCommunityStyle();
+        List<Set<String>> c2 = this.lastSolution.toCommunityStyle();
 
         final Set<String> c1Element = new HashSet<>();
         final Set<String> c2Element = new HashSet<>();
@@ -55,6 +55,11 @@ public class NMI implements Algorithm<NMIParams> {
             }).filter(s -> s.size() > 0).collect(Collectors.toList());
         }
         return this.apply(this.toCommunityNumberList(c1), this.toCommunityNumberList(c2));
+    }
+
+    @Override
+    public boolean dominate(final double a, final double b) {
+        return a > b;
     }
 
     /**
@@ -160,7 +165,7 @@ public class NMI implements Algorithm<NMIParams> {
         final List<Set<String>> c1 = new ArrayList<Set<String>>();
         final List<Set<String>> c2 = new ArrayList<Set<String>>();
         final Set<String> h1 = new HashSet<>();
-        h1.addAll(Arrays.asList( "1", "2", "3", "4", "5", "6"));
+        h1.addAll(Arrays.asList("1", "2", "3", "4", "5", "6"));
         final Set<String> h2 = new HashSet<>();
         h2.addAll(Arrays.asList("7", "8", "9", "10", "11", "12"));
         final Set<String> h3 = new HashSet<>();
@@ -169,9 +174,8 @@ public class NMI implements Algorithm<NMIParams> {
         c1.add(h2);
         c1.add(h3);
 
-
         final Set<String> h4 = new HashSet<>();
-        h4.addAll(Arrays.asList( "2", "8", "9", "10", "11"));
+        h4.addAll(Arrays.asList("2", "8", "9", "10", "11"));
         final Set<String> h5 = new HashSet<>();
         h5.addAll(Arrays.asList("1", "3", "4", "5", "6", "7", "13", "14"));
         final Set<String> h6 = new HashSet<>();
@@ -180,7 +184,9 @@ public class NMI implements Algorithm<NMIParams> {
         c2.add(h5);
         c2.add(h6);
 
-        System.out.println(NMI.instance.compute(NMIParams.construct(c1, c2)));
-        System.out.println(NMI.instance.compute(NMIParams.construct(c2, c1)));
+        System.out.println(new NMI(Chromosome.convertComms(c2)).compute(Chromosome.convertComms(c1)));
+        System.out.println(new NMI(Chromosome.convertComms(c1)).compute(Chromosome.convertComms(c1)));
+        System.out.println(new NMI(Chromosome.convertComms(c1)).compute(Chromosome.convertComms(c2)));
     }
+
 }

@@ -14,4 +14,8 @@ public interface Graph {
 
     public void displayCommunity(List<Set<String>> communities);
 
+    public List<String> getNeighbors(String nodeId);
+
+    public List<String> getNeighbors(Vertex node);
+
 }

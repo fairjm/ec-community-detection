@@ -3,16 +3,13 @@ package com.cc.graph.gep;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.cc.graph.Conf;
 import com.cc.graph.algorithm.Modularity;
-import com.cc.graph.algorithm.params.ModularityParams;
 import com.cc.graph.base.GraphUtil;
 import com.cc.graph.base.ImmutableGraph;
 import com.cc.graph.gep.selection.ModularitySelection;
@@ -131,7 +128,7 @@ public class WorkFlow {
         if (random.nextDouble() <= Conf.Gep.geneSplitoff) {
             this.doGeneSplitOff(ls);
         }
-        return new Chromosome(new HashSet<>(ls));
+        return new Chromosome(ls);
     }
 
     private void doGeneMove(final List<Gene> genes) {
@@ -180,10 +177,8 @@ public class WorkFlow {
         final Population pop = r.getLastPopulation();
         final List<Chromosome> cs = pop.getChromosomes();
         final List<Chromosome> ccs = new ArrayList<>(cs);
-        final List<Double> modularities = ccs.stream().map(c -> {
-            final List<Set<String>> communities = c.toCommunityStyle();
-            return Modularity.instance.compute(ModularityParams.construct(communities, graph));
-        }).collect(Collectors.toList());
+        final Modularity q = new Modularity(graph);
+        final List<Double> modularities = ccs.stream().map(c -> q.compute(c)).collect(Collectors.toList());
         double bestModularity = -1;
         int bestIndex = 0;
         for (int i = 0; i < ccs.size(); i++) {

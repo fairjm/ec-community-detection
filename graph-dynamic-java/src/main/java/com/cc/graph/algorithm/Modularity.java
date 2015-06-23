@@ -1,66 +1,77 @@
 package com.cc.graph.algorithm;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.cc.graph.algorithm.params.ModularityParams;
 import com.cc.graph.base.Edge;
 import com.cc.graph.base.Graph;
+import com.cc.graph.base.GraphUtil;
+import com.cc.graph.base.ImmutableGraph;
+import com.cc.graph.gep.Chromosome;
 
-public class Modularity implements Algorithm<ModularityParams> {
+public class Modularity implements Algorithm {
 
-    public static final Modularity instance  = new Modularity();
-
-    private Modularity() {
+    private final Graph graph;
+    public Modularity(final Graph graph) {
+        this.graph = graph;
     }
 
     @Override
-    public double compute(final ModularityParams params) {
-        final List<Set<String>> comms = params.comms;
-        final Graph graph = params.graph;
+    public double compute(final Chromosome solution) {
+        final List<Set<String>> comms = solution.toCommunityStyle();
         final int commSize = comms.size();
-        final Set<Edge> remainingEdges = new HashSet<>(graph.getEdges());
-        final int eSize = remainingEdges.size();
+        final int eSize = this.graph.getEdges().size();
         final List<Integer> inSizes = new ArrayList<>(commSize);
-        comms.forEach(comm -> {
-            int inCount = 0;
-            for (final String n1 : comm) {
-                for (final String n2 : comm) {
-                    if (n1.compareTo(n2) < 0) {
-                        final Edge edge = new Edge(n1, n2);
-                        if (remainingEdges.contains(edge)) {
-                            inCount = inCount + 1;
-                            remainingEdges.remove(edge);
-                        }
-                    }
-                }
-            }
-            inSizes.add(inCount);
-        });
-
         final List<Integer> outSizes = new ArrayList<Integer>(commSize);
-        comms.forEach(comm -> {
-            int outCount = 0;
-            for (final String n : comm) {
-                for (final Edge e : remainingEdges) {
-                    if (e.containsNode(n)) {
-                        outCount = outCount + 1;
+
+        for (final Set<String> comm : comms) {
+            int outSize = 0;
+            final Set<Edge> keeped = new HashSet<Edge>();
+            for (final String node : comm) {
+                final List<String> neighbors = this.graph.getNeighbors(node);
+                for (final String neighbor : neighbors) {
+                    if (comm.contains(neighbor)) {
+                        keeped.add(new Edge(neighbor, node));
+                    } else {
+                        outSize += 1;
                     }
                 }
             }
-            outSizes.add(outCount);
-        });
+            inSizes.add(keeped.size());
+            outSizes.add(outSize);
+        }
 
         double result = 0;
         for (int i = 0; i < comms.size(); i++) {
+            System.out.println(Modularity.compute(outSizes.get(i), inSizes.get(i), eSize));
             result += Modularity.compute(outSizes.get(i), inSizes.get(i), eSize);
         }
         return result;
     }
 
+    @Override
+    public boolean dominate(final double a, final double b) {
+        return a > b;
+    }
+
     private static double compute(final int outSize, final int inSize, final int eSize) {
         return 1.0 * inSize / eSize - Math.pow((1.0 * 2 * inSize + outSize) / (2 * eSize), 2);
     }
+
+    public static void main(final String[] args) throws IOException {
+        final ImmutableGraph graph = GraphUtil.load("src/main/resources/test2.txt");
+        final List<Set<String>> comms = new ArrayList<Set<String>>(3);
+        comms.add(new HashSet<>(Arrays.asList("0", "1", "2", "3")));
+        comms.add(new HashSet<>(Arrays.asList("4", "5", "6")));
+        comms.add(new HashSet<>(Arrays.asList("7", "8", "9")));
+        final double r = new Modularity(graph).compute(Chromosome.convertComms(comms));
+        System.out.println(r);
+        graph.display();
+    }
+
+
 }

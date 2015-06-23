@@ -3,12 +3,10 @@ package com.cc.graph.gep.selection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.cc.graph.algorithm.Modularity;
-import com.cc.graph.algorithm.params.ModularityParams;
 import com.cc.graph.base.ImmutableGraph;
 import com.cc.graph.gep.Chromosome;
 
@@ -17,13 +15,13 @@ public class ModularitySelection implements SelectionStrategy {
     @Override
     public SelectionResult choose(final List<Chromosome> chroms, final ImmutableGraph graph,
             final int chooseNum) {
+        final Modularity q = new Modularity(graph);
         final int chromsSize = chroms.size();
         if (chromsSize == 0) {
             return new SelectionResult(Optional.empty(), chroms);
         }
         final List<Double> modularities = chroms.stream().map(c -> {
-            final List<Set<String>> comms = c.toCommunityStyle();
-            final double result = Modularity.instance.compute(ModularityParams.construct(comms, graph));
+            final double result = q.compute(c);
             return result < 0 ? 0 : result;
         }).collect(Collectors.toList());
 

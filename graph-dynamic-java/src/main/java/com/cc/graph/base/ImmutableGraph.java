@@ -2,6 +2,8 @@ package com.cc.graph.base;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -23,7 +25,8 @@ public class ImmutableGraph implements Graph {
 
     private final SingleGraph displayGraph;
 
-    public ImmutableGraph(final Set<Edge> edges, final Set<Vertex> vertexes, final SingleGraph displayGraph) {
+    public ImmutableGraph(final Set<Edge> edges, final Set<Vertex> vertexes,
+            final SingleGraph displayGraph) {
         this.edges = Collections.unmodifiableSet(edges);
         this.vertexes = Collections.unmodifiableSet(vertexes);
         this.displayGraph = displayGraph;
@@ -70,8 +73,8 @@ public class ImmutableGraph implements Graph {
                     if (node1.compareTo(node2) < 0) {
                         final Edge edge = new Edge(node1, node2);
                         if (this.edges.contains(edge)) {
-                            this.displayGraph.getEdge(node1 + "edges" + node2).addAttribute("ui.style",
-                                    "fill-color:" + colorString + ";");
+                            this.displayGraph.getEdge(node1 + "edges" + node2).addAttribute(
+                                    "ui.style", "fill-color:" + colorString + ";");
                         }
                     }
                     this.displayGraph.getNode(node1).addAttribute("ui.style",
@@ -82,6 +85,26 @@ public class ImmutableGraph implements Graph {
         }
         this.display();
     }
+
+    @Override
+    public List<String> getNeighbors(final String nodeId) {
+        return this.getNeighbors(new Vertex(nodeId));
+    }
+
+    @Override
+    public List<String> getNeighbors(final Vertex node) {
+        List<String> neighborsList = Collections.emptyList();
+        if (this.vertexes.contains(node)) {
+            final Iterator<Node> neighbors = this.displayGraph.getNode(node.getId())
+                    .getNeighborNodeIterator();
+            neighborsList = new LinkedList<String>();
+            while (neighbors.hasNext()) {
+                neighborsList.add(neighbors.next().getId());
+            }
+        }
+        return neighborsList;
+    }
+
 }
 
 class MutableGraph implements Graph {
@@ -98,8 +121,8 @@ class MutableGraph implements Graph {
     private final SingleGraph displayGraph = new SingleGraph(Conf.projectName);
 
     {
-        this.displayGraph.addAttribute("ui.stylesheet", "url('"
-                + MutableGraph.class.getResource(".").toString() + "stylesheet.css')");
+        this.displayGraph.addAttribute("ui.stylesheet",
+                "url('" + MutableGraph.class.getResource(".").toString() + "stylesheet.css')");
         this.displayGraph.addAttribute("ui.quality");
         this.displayGraph.addAttribute("ui.antialias");
     }
@@ -137,16 +160,19 @@ class MutableGraph implements Graph {
     }
 
     public void addEdge(final Edge edge) {
-        LockUtil.withLock(this._lock, () -> {
-            if (!this.edges.contains(edge)) {
-                final Vertex v1 = edge.getSide1();
-                final Vertex v2 = edge.getSide2();
-                this.addVertex(v1);
-                this.addVertex(v2);
-                this.edges.add(edge);
-                this.displayGraph.addEdge(v1.getId() + "edges" + v2.getId(), v1.getId(), v2.getId());
-            }
-        });
+        LockUtil.withLock(
+                this._lock,
+                () -> {
+                    if (!this.edges.contains(edge)) {
+                        final Vertex v1 = edge.getSide1();
+                        final Vertex v2 = edge.getSide2();
+                        this.addVertex(v1);
+                        this.addVertex(v2);
+                        this.edges.add(edge);
+                        this.displayGraph.addEdge(v1.getId() + "edges" + v2.getId(), v1.getId(),
+                                v2.getId());
+                    }
+                });
     }
 
     @Override
@@ -175,13 +201,23 @@ class MutableGraph implements Graph {
 
     @Override
     public String toString() {
-        return "MutableGraph [edges size=" + this.edges.size() + ", vertexes size=" + this.vertexes.size()
-                + "]";
+        return "MutableGraph [edges size=" + this.edges.size() + ", vertexes size="
+                + this.vertexes.size() + "]";
     }
 
     @Override
     public void displayCommunity(final List<Set<String>> communities) {
         this.freeze().displayCommunity(communities);
+    }
+
+    @Override
+    public List<String> getNeighbors(final String nodeId) {
+        return this.freeze().getNeighbors(nodeId);
+    }
+
+    @Override
+    public List<String> getNeighbors(final Vertex node) {
+        return this.freeze().getNeighbors(node);
     }
 
 }
