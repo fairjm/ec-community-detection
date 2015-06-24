@@ -47,7 +47,6 @@ public class Modularity implements Algorithm {
 
         double result = 0;
         for (int i = 0; i < comms.size(); i++) {
-            System.out.println(Modularity.compute(outSizes.get(i), inSizes.get(i), eSize));
             result += Modularity.compute(outSizes.get(i), inSizes.get(i), eSize);
         }
         return result;

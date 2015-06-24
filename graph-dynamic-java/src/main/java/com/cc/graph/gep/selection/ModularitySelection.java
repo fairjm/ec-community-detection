@@ -12,6 +12,11 @@ import com.cc.graph.gep.Chromosome;
 
 public class ModularitySelection implements SelectionStrategy {
 
+    private ModularitySelection() {
+    }
+
+    public static final ModularitySelection instance = new ModularitySelection();
+
     @Override
     public SelectionResult choose(final List<Chromosome> chroms, final ImmutableGraph graph,
             final int chooseNum) {

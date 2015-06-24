@@ -14,15 +14,8 @@ import com.cc.graph.base.GraphUtil;
 import com.cc.graph.base.ImmutableGraph;
 import com.cc.graph.gep.selection.ModularitySelection;
 import com.cc.graph.gep.selection.SelectionResult;
-import com.cc.graph.gep.selection.SelectionStrategy;
 
 public class WorkFlow {
-
-    private final SelectionStrategy selection;
-
-    public WorkFlow(final SelectionStrategy selection) {
-        this.selection = selection;
-    }
 
     public static final class Result {
         private final List<Population> history = new LinkedList<>();
@@ -95,7 +88,7 @@ public class WorkFlow {
             return lastResult;
         } else {
             final List<Chromosome> lastChroms = lastPop.getChromosomes();
-            final SelectionResult choosedChroms = this.selection.choose(lastChroms, graph,
+            final SelectionResult choosedChroms = ModularitySelection.instance.choose(lastChroms, graph,
                     lastChroms.size() - 1);
 
             final List<Chromosome> mutatedChroms = choosedChroms.selected.stream()
@@ -171,7 +164,7 @@ public class WorkFlow {
     }
 
     public static void main(final String[] args) throws IOException {
-        final WorkFlow workFlow = new WorkFlow(new ModularitySelection());
+        final WorkFlow workFlow = new WorkFlow();
         final ImmutableGraph graph = GraphUtil.load("src/main/resources/test.txt");
         final WorkFlow.Result r = workFlow.run(graph);
         final Population pop = r.getLastPopulation();
