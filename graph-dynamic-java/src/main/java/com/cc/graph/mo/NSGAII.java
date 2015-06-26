@@ -3,6 +3,7 @@ package com.cc.graph.mo;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,9 +23,82 @@ public class NSGAII {
             r.add(pop.getChromosomes());
             return r;
         }
+        // 记录下标元素的被支配次数
+        final Map<Integer, Integer> dominatedNum = new HashMap<>();
+        // 记录下标元素支配的元素的下标集合
+        final Map<Integer, List<Integer>> dominateSet = new HashMap<>();
+        final List<Chromosome> chroms = pop.getChromosomes();
+        for (int i = 0; i < chroms.size(); i++) {
+            for (int j = i + 1; j < chroms.size(); j++) {
+                dominateSet.putIfAbsent(i, new LinkedList<>());
+                dominateSet.putIfAbsent(j, new LinkedList<>());
+                dominatedNum.putIfAbsent(i, 0);
+                dominatedNum.putIfAbsent(j, 0);
+                if (NSGAII.dominated(chroms.get(i), chroms.get(j), algorithms)) {
+                    dominateSet.get(i).add(j);
+                    final int num = dominatedNum.getOrDefault(j, 0);
+                    dominatedNum.put(j, num + 1);
+                } else if (NSGAII.dominated(chroms.get(j), chroms.get(i), algorithms)) {
+                    dominateSet.get(j).add(i);
+                    final int num = dominatedNum.getOrDefault(i, 0);
+                    dominatedNum.put(i, num + 1);
+                }
+            }
+        }
 
-        return null;
+        final List<List<Integer>> levels = new ArrayList<>();
+        // 先得到level1
+        final List<Integer> level1 = new ArrayList<>();
+        for (final Entry<Integer, Integer> e : dominatedNum.entrySet()) {
+            if (e.getValue() == 0) {
+                level1.add(e.getKey());
+            }
+        }
+        levels.add(level1);
 
+        int index = 0;
+        while (levels.size() > index) {
+            final List<Integer> level = levels.get(index);
+            final List<Integer> newLevel = new ArrayList<>();
+
+            for (final Integer i : level) {
+                final List<Integer> domainElems = dominateSet.get(i);
+                for (final Integer beDomained : domainElems) {
+                    int lastNum = dominatedNum.get(beDomained);
+                    if (lastNum == 1) {
+                        newLevel.add(beDomained);
+                    }
+                    lastNum = lastNum - 1;
+                    dominatedNum.put(beDomained, lastNum);
+                }
+            }
+
+            if (newLevel.isEmpty()) {
+                break;
+            } else {
+                levels.add(newLevel);
+            }
+            index += 1;
+        }
+        return levels.stream()
+                .map(l -> l.stream().map(e -> chroms.get(e)).collect(Collectors.toList()))
+                .collect(Collectors.toList());
+
+    }
+
+    private static boolean dominated(final Chromosome c1, final Chromosome c2,
+            final Algorithm... algorithms) {
+        boolean atLeastOne = false;
+        for (final Algorithm a : algorithms) {
+            final double c1Value = a.compute(c1);
+            final double c2Value = a.compute(c2);
+            if (a.dominate(c2Value, c1Value)) {
+                return false;
+            } else if (!atLeastOne && a.dominate(c1Value, c2Value)) {
+                atLeastOne = true;
+            }
+        }
+        return true;
     }
 
     public static List<Chromosome> crowdingDistanceSort(final List<Chromosome> chroms,
