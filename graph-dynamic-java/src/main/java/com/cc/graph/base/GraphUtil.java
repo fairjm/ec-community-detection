@@ -15,7 +15,7 @@ public class GraphUtil {
         final MutableGraph graph = Files.readAllLines(Paths.get(fileName)).stream()
                 .map(l -> l.trim()).filter(l -> l.length() > 0).map(l -> l.split(seperator))
                 .filter(cs -> cs.length == 2).reduce(new MutableGraph(), (r, e) -> {
-                    r.addEdge(new Edge(e[0], e[1]));
+                    r.addEdge(new Edge(e[0].trim(), e[1].trim()));
                     return r;
                 }, (r1, r2) -> r1);
         return graph.freeze();

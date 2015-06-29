@@ -9,11 +9,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.cc.graph.Conf;
+import com.cc.graph.algorithm.Algorithm;
 import com.cc.graph.algorithm.Modularity;
 import com.cc.graph.base.GraphUtil;
 import com.cc.graph.base.ImmutableGraph;
-import com.cc.graph.gep.selection.ModularitySelection;
-import com.cc.graph.gep.selection.SelectionResult;
+import com.cc.graph.mo.NSGAII;
 
 public class WorkFlow {
 
@@ -73,35 +73,44 @@ public class WorkFlow {
 
     }
 
-    public Result run(final ImmutableGraph graph) {
+    public Result runTimestamp0(final ImmutableGraph graph, final Algorithm... algorithms) {
         final Population initPopulation = Population.generate(graph, Conf.Gep.populationSize);
         return this.innerRun(
-                new Result().updateTheLast(initPopulation).pushToHistory(initPopulation), graph,
-                Conf.Gep.generationNum);
+                new Result().updateTheLast(initPopulation).pushToHistory(initPopulation),
+                Conf.Gep.generationNum, algorithms);
     }
 
-    public Result innerRun(final Result lastResult, final ImmutableGraph graph,
-            final int maxGenerationNum) {
+    public Result innerRun(final Result lastResult, final int maxGenerationNum,
+            final Algorithm... algorithms) {
         final Population lastPop = lastResult.lastPopulation;
         System.out.println(lastPop.getGenerationNum() + "/" + maxGenerationNum);
         if (lastPop.getGenerationNum() >= maxGenerationNum) {
             return lastResult;
         } else {
             final List<Chromosome> lastChroms = lastPop.getChromosomes();
-            final SelectionResult choosedChroms = ModularitySelection.instance.choose(lastChroms, graph,
-                    lastChroms.size() - 1);
-
-            final List<Chromosome> mutatedChroms = choosedChroms.selected.stream()
+            final List<Chromosome> mixedChroms = lastChroms.stream()
                     .map(c -> this.operateChromosome(c)).collect(Collectors.toList());
+            mixedChroms.addAll(lastChroms);
 
-            final Chromosome theRemainedOne = choosedChroms.best.get();
-            System.out.println(theRemainedOne);
-            final List<Chromosome> newChromosomes = new ArrayList<>(mutatedChroms);
-            newChromosomes.add(theRemainedOne);
+            final List<List<Chromosome>> levels = NSGAII.fastNondominatedSort(mixedChroms,
+                    algorithms);
+            System.out.println(levels.size());
+            final List<Chromosome> newChromosomes = new ArrayList<>();
+            int index = 0;
+            while ((lastChroms.size() - newChromosomes.size()) >= levels.get(index).size()) {
+                newChromosomes.addAll(levels.get(index));
+                index += 1;
+            }
+            final int remaining = lastChroms.size() - newChromosomes.size();
+            if (remaining != 0) {
+                final List<Chromosome> sorted = NSGAII.crowdingDistanceSort(levels.get(index),
+                        algorithms);
+                newChromosomes.addAll(sorted.subList(0, remaining));
+            }
             final Population population = new Population(newChromosomes,
                     lastPop.getGenerationNum() + 1);
             return this.innerRun(lastResult.pushToHistory(population).updateTheLast(population),
-                    graph, maxGenerationNum);
+                    maxGenerationNum, algorithms);
         }
     }
 
@@ -165,13 +174,14 @@ public class WorkFlow {
 
     public static void main(final String[] args) throws IOException {
         final WorkFlow workFlow = new WorkFlow();
-        final ImmutableGraph graph = GraphUtil.load("src/main/resources/test.txt");
-        final WorkFlow.Result r = workFlow.run(graph);
+        final ImmutableGraph graph = GraphUtil.load("src/main/resources/Zachary.txt");
+        final WorkFlow.Result r = workFlow.runTimestamp0(graph, new Modularity(graph));
         final Population pop = r.getLastPopulation();
         final List<Chromosome> cs = pop.getChromosomes();
         final List<Chromosome> ccs = new ArrayList<>(cs);
         final Modularity q = new Modularity(graph);
-        final List<Double> modularities = ccs.stream().map(c -> q.compute(c)).collect(Collectors.toList());
+        final List<Double> modularities = ccs.stream().map(c -> q.compute(c))
+                .collect(Collectors.toList());
         double bestModularity = -1;
         int bestIndex = 0;
         for (int i = 0; i < ccs.size(); i++) {

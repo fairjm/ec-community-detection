@@ -11,34 +11,28 @@ import java.util.stream.Collectors;
 
 import com.cc.graph.algorithm.Algorithm;
 import com.cc.graph.gep.Chromosome;
-import com.cc.graph.gep.Population;
+import com.cc.graph.util.Tuple2;
 
-public class NSGAII {
+public final class NSGAII {
 
-    public static List<List<Chromosome>> fastNondominatedSort(final Population pop,
+    public static List<List<Chromosome>> fastNondominatedSort(final List<Chromosome> chroms,
             final Algorithm... algorithms) {
-        // 如果只有一个算法 那么没必要求支配集
-        if (pop.size() <= 1 || algorithms.length == 1) {
-            final List<List<Chromosome>> r = new ArrayList<>();
-            r.add(pop.getChromosomes());
-            return r;
-        }
         // 记录下标元素的被支配次数
         final Map<Integer, Integer> dominatedNum = new HashMap<>();
         // 记录下标元素支配的元素的下标集合
         final Map<Integer, List<Integer>> dominateSet = new HashMap<>();
-        final List<Chromosome> chroms = pop.getChromosomes();
+        final Map<Tuple2<Algorithm, Chromosome>, Double> cache = new HashMap<>();
         for (int i = 0; i < chroms.size(); i++) {
             for (int j = i + 1; j < chroms.size(); j++) {
                 dominateSet.putIfAbsent(i, new LinkedList<>());
                 dominateSet.putIfAbsent(j, new LinkedList<>());
                 dominatedNum.putIfAbsent(i, 0);
                 dominatedNum.putIfAbsent(j, 0);
-                if (NSGAII.dominated(chroms.get(i), chroms.get(j), algorithms)) {
+                if (NSGAII.dominated(chroms.get(i), chroms.get(j), cache, algorithms)) {
                     dominateSet.get(i).add(j);
                     final int num = dominatedNum.getOrDefault(j, 0);
                     dominatedNum.put(j, num + 1);
-                } else if (NSGAII.dominated(chroms.get(j), chroms.get(i), algorithms)) {
+                } else if (NSGAII.dominated(chroms.get(j), chroms.get(i), cache, algorithms)) {
                     dominateSet.get(j).add(i);
                     final int num = dominatedNum.getOrDefault(i, 0);
                     dominatedNum.put(i, num + 1);
@@ -87,18 +81,21 @@ public class NSGAII {
     }
 
     private static boolean dominated(final Chromosome c1, final Chromosome c2,
-            final Algorithm... algorithms) {
+            final Map<Tuple2<Algorithm, Chromosome>, Double> cache, final Algorithm... algorithms) {
         boolean atLeastOne = false;
         for (final Algorithm a : algorithms) {
-            final double c1Value = a.compute(c1);
-            final double c2Value = a.compute(c2);
+            final Tuple2<Algorithm, Chromosome> c1t = new Tuple2<>(a, c1);
+            final Tuple2<Algorithm, Chromosome> c2t = new Tuple2<>(a, c2);
+
+            final double c1Value = cache.computeIfAbsent(c1t, k -> a.compute(c1));
+            final double c2Value = cache.computeIfAbsent(c2t, k -> a.compute(c2));
             if (a.dominate(c2Value, c1Value)) {
                 return false;
             } else if (!atLeastOne && a.dominate(c1Value, c2Value)) {
                 atLeastOne = true;
             }
         }
-        return true;
+        return atLeastOne;
     }
 
     public static List<Chromosome> crowdingDistanceSort(final List<Chromosome> chroms,

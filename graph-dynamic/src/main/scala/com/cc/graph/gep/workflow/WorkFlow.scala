@@ -206,9 +206,9 @@ object WorkFlow extends App {
   //  runFootball1()
   //  run1(seperator = " ", file = "src/main/resources/football/edges.1.1.txt")
 
-  //    runZachary()
+      runZachary()
   //  runDolphin
-  runFootballSelf()
+//  runFootballSelf()
 
   //  val graph = Graph.load("src/main/resources/Zachary.txt", seperator = ",")
   //  val r = Modularity.compute(List(Set("9","10","15","16","19","21","23","24","25","26","27","28","29","30","31","32","33","34"),

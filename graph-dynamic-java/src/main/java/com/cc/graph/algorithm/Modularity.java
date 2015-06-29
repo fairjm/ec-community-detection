@@ -62,11 +62,10 @@ public class Modularity implements Algorithm {
     }
 
     public static void main(final String[] args) throws IOException {
-        final ImmutableGraph graph = GraphUtil.load("src/main/resources/test2.txt");
-        final List<Set<String>> comms = new ArrayList<Set<String>>(3);
-        comms.add(new HashSet<>(Arrays.asList("0", "1", "2", "3")));
-        comms.add(new HashSet<>(Arrays.asList("4", "5", "6")));
-        comms.add(new HashSet<>(Arrays.asList("7", "8", "9")));
+        final ImmutableGraph graph = GraphUtil.load("src/main/resources/Zachary.txt");
+        final List<Set<String>> comms = new ArrayList<Set<String>>(2);
+        comms.add(new HashSet<>(Arrays.asList("9","10","15","16","19","21","23","24","25","26","27","28","29","30","31","32","33","34")));
+        comms.add(new HashSet<>(Arrays.asList("1","2","3","4","5","6","7","8","11","12","13","14","17","18","20","22")));
         final double r = new Modularity(graph).compute(Chromosome.convertComms(comms));
         System.out.println(r);
         graph.display();
