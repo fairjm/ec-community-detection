@@ -11,8 +11,10 @@ import java.util.stream.Collectors;
 import com.cc.graph.Conf;
 import com.cc.graph.algorithm.Algorithm;
 import com.cc.graph.algorithm.Modularity;
+import com.cc.graph.algorithm.NMI;
 import com.cc.graph.base.GraphUtil;
 import com.cc.graph.base.ImmutableGraph;
+import com.cc.graph.gep.selection.ModularitySelection;
 import com.cc.graph.mo.NSGAII;
 
 public class WorkFlow {
@@ -73,14 +75,71 @@ public class WorkFlow {
 
     }
 
-    public Result runTimestamp0(final ImmutableGraph graph, final Algorithm... algorithms) {
+    /**
+     * 这个方法用于扩展算法 可以在这个方法的实现中增加所需的算法
+     *
+     * @param graphs
+     * @return
+     */
+    public List<Result> run(final ImmutableGraph... graphs) {
+        if (graphs.length == 0) {
+            return Collections.emptyList();
+        }
+        final List<Result> results = new ArrayList<>(graphs.length);
+
+        Chromosome lastSolution = null;
+
+        for (int i = 0; i < graphs.length; i++) {
+            Result thisResult;
+            final ImmutableGraph graph = graphs[i];
+            // timestamp = 0
+            if (i == 0) {
+                thisResult = this.runTimestamp(graph, new Modularity(graph));
+            } else {
+                // timestamp > 0
+                final Algorithm a1 = new Modularity(graph);
+                final Algorithm a2 = new NMI(lastSolution);
+                thisResult = this.runTimestamp(graph, a1, a2);
+
+            }
+            results.add(thisResult);
+            lastSolution = this.getBestChromosome(thisResult.getLastPopulation(), graph);
+        }
+        return results;
+    }
+
+    /**
+     * 在最后一代选择最好的结果 这边以模块度为最好的结果训责算法
+     *
+     * @param pop
+     * @param graph
+     * @return
+     */
+    private Chromosome getBestChromosome(final Population pop, final ImmutableGraph graph) {
+        return ModularitySelection.instance.choose(pop.getChromosomes(), graph).best.get();
+    }
+
+    /**
+     * 此方法用于初始化网络对应的种群 并传递给进行元算的innerRun方法
+     * @param graph
+     * @param algorithms
+     * @return
+     */
+    private Result runTimestamp(final ImmutableGraph graph, final Algorithm... algorithms) {
         final Population initPopulation = Population.generate(graph, Conf.Gep.populationSize);
         return this.innerRun(
                 new Result().updateTheLast(initPopulation).pushToHistory(initPopulation),
                 Conf.Gep.generationNum, algorithms);
     }
 
-    public Result innerRun(final Result lastResult, final int maxGenerationNum,
+    /**
+     * 世代迭代
+     * @param lastResult
+     * @param maxGenerationNum
+     * @param algorithms
+     * @return
+     */
+    private Result innerRun(final Result lastResult, final int maxGenerationNum,
             final Algorithm... algorithms) {
         final Population lastPop = lastResult.lastPopulation;
         System.out.println(lastPop.getGenerationNum() + "/" + maxGenerationNum);
@@ -114,6 +173,11 @@ public class WorkFlow {
         }
     }
 
+    /**
+     * 染色体操作
+     * @param chrom
+     * @return
+     */
     private Chromosome operateChromosome(final Chromosome chrom) {
         final ThreadLocalRandom random = ThreadLocalRandom.current();
         final List<Gene> ls = new ArrayList<Gene>(chrom.genes.size());
@@ -175,7 +239,7 @@ public class WorkFlow {
     public static void main(final String[] args) throws IOException {
         final WorkFlow workFlow = new WorkFlow();
         final ImmutableGraph graph = GraphUtil.load("src/main/resources/Zachary.txt");
-        final WorkFlow.Result r = workFlow.runTimestamp0(graph, new Modularity(graph));
+        final WorkFlow.Result r = workFlow.run(graph).get(0);
         final Population pop = r.getLastPopulation();
         final List<Chromosome> cs = pop.getChromosomes();
         final List<Chromosome> ccs = new ArrayList<>(cs);
